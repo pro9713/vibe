@@ -3,16 +3,19 @@ import { compareProductOffers, type ComparisonResult } from "@/lib/quickcommerce
 import { acquireJobLock, releaseJobLock } from "@/lib/monitoring/lock";
 import {
   recordExecutionLog,
-  type MonitoringExecutionRecord,
   type ExecutionStatus,
 } from "@/lib/monitoring/logger";
 import { recordPriceSnapshot } from "@/lib/price-history";
-import { createPriceAlert } from "@/lib/price-alerts";
+import { createCloudPriceAlert } from "@/lib/cloud/price-alerts";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 export interface MonitoredProductTarget {
+  id?: string;
+  userId?: string;
   productId: string;
   targetPrice?: number;
   pincode?: string;
+  trackedAt?: string;
   lastCheckedAt?: number;
 }
 
@@ -41,24 +44,37 @@ const lastCheckedTimestamps = new Map<string, number>();
  */
 export function registerProductForMonitoring(target: MonitoredProductTarget): void {
   if (!target.productId) return;
-  const key = `${target.productId}_${target.pincode || "default"}`;
+  const key = `${target.userId || "anon"}_${target.productId}_${target.pincode || "default"}`;
   monitoredTargetsRegistry.set(key, target);
 }
 
 /**
- * Gets all currently registered products for server monitoring.
+ * Loads active tracked targets directly from the Supabase tracked_targets database table.
  */
-export function getMonitoredProducts(): MonitoredProductTarget[] {
-  // If registry is empty, seed with catalog products to allow immediate scheduled checks
-  if (monitoredTargetsRegistry.size === 0) {
-    for (const prod of products) {
-      registerProductForMonitoring({
-        productId: prod.id,
-        targetPrice: Math.round(prod.bestDeal.price * 0.9), // Default 10% below current
-        pincode: "400001",
-      });
+export async function loadActiveTrackedTargets(): Promise<MonitoredProductTarget[]> {
+  const admin = createAdminSupabaseClient();
+  if (admin) {
+    try {
+      const { data, error } = await admin
+        .from("tracked_targets")
+        .select("id, user_id, product_id, target_price, tracked_at");
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        return data.map((row) => ({
+          id: row.id,
+          userId: row.user_id,
+          productId: row.product_id,
+          targetPrice: row.target_price !== null ? Number(row.target_price) : undefined,
+          trackedAt: row.tracked_at,
+          pincode: "400001", // Default delivery postal code for comparison
+        }));
+      }
+    } catch (err) {
+      console.warn("[PriceMonitor] Error querying tracked_targets table:", err);
     }
   }
+
+  // Fallback to in-memory registry if database is empty or inaccessible
   return Array.from(monitoredTargetsRegistry.values());
 }
 
@@ -71,7 +87,7 @@ export function clearMonitoredRegistry(): void {
 }
 
 /**
- * Helper to determine if an error is transient (e.g. network/timeout) vs permanent (e.g. invalid ID).
+ * Helper to determine if an error is transient (e.g. network/timeout) vs permanent.
  */
 function isTransientError(error: unknown): boolean {
   if (!error) return false;
@@ -87,14 +103,22 @@ function isTransientError(error: unknown): boolean {
   );
 }
 
+export type PriceOfferFetcher = (params: {
+  productId: string;
+  pincode?: string;
+}) => Promise<ComparisonResult>;
+
 /**
  * Runs the automated background price monitoring job with lock safety, batching, and error isolation.
+ * Loads active user targets from Supabase, compares live prices, and triggers cloud price alerts.
  */
 export async function runPriceMonitoringJob(options?: {
   forceAll?: boolean;
   maxBatchSize?: number;
   intervalMinutes?: number;
   maxRetries?: number;
+  targetsOverride?: MonitoredProductTarget[];
+  offerFetcher?: PriceOfferFetcher;
 }): Promise<MonitoringJobResult> {
   const startTime = Date.now();
   const executionId = `exec_${startTime}_${Math.random().toString(36).slice(2, 7)}`;
@@ -141,11 +165,13 @@ export async function runPriceMonitoringJob(options?: {
   const intervalMinutes = options?.intervalMinutes ?? (isNaN(envInterval) ? 60 : envInterval);
   const intervalMs = intervalMinutes * 60 * 1000;
 
-  const envBatchSize = parseInt(process.env.PRICE_MONITOR_BATCH_SIZE || "20", 10);
-  const maxBatchSize = options?.maxBatchSize ?? (isNaN(envBatchSize) ? 20 : envBatchSize);
+  const envBatchSize = parseInt(process.env.PRICE_MONITOR_BATCH_SIZE || "50", 10);
+  const maxBatchSize = options?.maxBatchSize ?? (isNaN(envBatchSize) ? 50 : envBatchSize);
   const maxRetries = options?.maxRetries ?? 1;
 
-  const targets = getMonitoredProducts();
+  // Load active user tracked targets from Supabase (or override if provided for testing)
+  const targets = options?.targetsOverride ?? (await loadActiveTrackedTargets());
+  const offerFetcher = options?.offerFetcher ?? compareProductOffers;
   const errorMessages: string[] = [];
 
   let checkedProducts = 0;
@@ -163,7 +189,7 @@ export async function runPriceMonitoringJob(options?: {
         break;
       }
 
-      const targetKey = `${target.productId}_${target.pincode || "default"}`;
+      const targetKey = `${target.userId || "anon"}_${target.productId}_${target.pincode || "default"}`;
       const lastChecked = lastCheckedTimestamps.get(targetKey) || 0;
       const now = Date.now();
 
@@ -178,48 +204,111 @@ export async function runPriceMonitoringJob(options?: {
 
       while (attempt <= maxRetries && !success) {
         try {
-          // Compare real product offers
-          const comparison: ComparisonResult = await compareProductOffers({
+          // Compare live product offers using configured offer fetcher
+          const comparison: ComparisonResult = await offerFetcher({
             productId: target.productId,
             pincode: target.pincode,
           });
 
           lastCheckedTimestamps.set(targetKey, Date.now());
           checkedProducts++;
+
+          if (!comparison.success || !Array.isArray(comparison.offers) || comparison.offers.length === 0) {
+            // If no current live price is available, safely skip and record reason
+            skippedProducts++;
+            errorMessages.push(`Target ${target.productId}: No live price offers returned`);
+            success = true;
+            break;
+          }
+
+          const validOffers = comparison.offers.filter((o) => o.price > 0 && o.availability !== false);
+          if (validOffers.length === 0) {
+            skippedProducts++;
+            errorMessages.push(`Target ${target.productId}: No available in-stock offers`);
+            success = true;
+            break;
+          }
+
           successfulChecks++;
           success = true;
+          checkedOffers += validOffers.length;
 
-          if (comparison.success && Array.isArray(comparison.offers)) {
-            checkedOffers += comparison.offers.length;
+          const targetProduct = products.find((p) => p.id === target.productId);
+          const productName = comparison.productName || targetProduct?.name || target.productId;
 
-            for (const offer of comparison.offers) {
-              if (offer.price > 0 && offer.availability !== false) {
-                newSnapshots++;
+          for (const offer of validOffers) {
+            newSnapshots++;
 
-                // Record real historical snapshot
-                recordPriceSnapshot({
+            // Record price snapshot for historical charting
+            recordPriceSnapshot({
+              productId: target.productId,
+              store: offer.store,
+              price: offer.price,
+              pincode: target.pincode,
+              source: "quickcommerce",
+            });
+
+            const previousPrice = offer.originalPrice && offer.originalPrice > offer.price
+              ? offer.originalPrice
+              : undefined;
+
+            // Target user assignment
+            const alertUserId = target.userId;
+
+            // 1. Detect TARGET_REACHED: current price <= target_price
+            if (target.targetPrice && offer.price <= target.targetPrice) {
+              const dropAmount = previousPrice && previousPrice > offer.price
+                ? previousPrice - offer.price
+                : (target.targetPrice > offer.price ? target.targetPrice - offer.price : 0);
+
+              const dropPercentage = previousPrice && previousPrice > 0
+                ? Math.round(((previousPrice - offer.price) / previousPrice) * 100)
+                : undefined;
+
+              if (alertUserId) {
+                const cloudAlert = await createCloudPriceAlert(alertUserId, {
                   productId: target.productId,
+                  productName,
                   store: offer.store,
-                  price: offer.price,
+                  previousPrice,
+                  currentPrice: offer.price,
+                  targetPrice: target.targetPrice,
+                  dropAmount: dropAmount > 0 ? dropAmount : undefined,
+                  dropPercentage,
                   pincode: target.pincode,
-                  source: "quickcommerce",
+                  type: "TARGET_REACHED",
                 });
 
-                // Check if offer meets or beats target price
-                if (target.targetPrice && offer.price <= target.targetPrice) {
-                  const targetAlert = createPriceAlert({
-                    productId: target.productId,
-                    productName: target.productId,
-                    store: offer.store,
-                    currentPrice: offer.price,
-                    targetPrice: target.targetPrice,
-                    type: "TARGET_REACHED",
-                    pincode: target.pincode,
-                  });
+                if (cloudAlert) {
+                  alertsGenerated++;
+                }
+              }
+            }
+            // 2. Detect PRICE_DROP: significant price drop (>= 5%)
+            else if (
+              previousPrice &&
+              previousPrice > offer.price &&
+              (previousPrice - offer.price) / previousPrice >= 0.05
+            ) {
+              const dropAmount = previousPrice - offer.price;
+              const dropPercentage = Math.round((dropAmount / previousPrice) * 100);
 
-                  if (targetAlert) {
-                    alertsGenerated++;
-                  }
+              if (alertUserId) {
+                const cloudAlert = await createCloudPriceAlert(alertUserId, {
+                  productId: target.productId,
+                  productName,
+                  store: offer.store,
+                  previousPrice,
+                  currentPrice: offer.price,
+                  targetPrice: target.targetPrice,
+                  dropAmount,
+                  dropPercentage,
+                  pincode: target.pincode,
+                  type: "PRICE_DROP",
+                });
+
+                if (cloudAlert) {
+                  alertsGenerated++;
                 }
               }
             }
@@ -234,9 +323,9 @@ export async function runPriceMonitoringJob(options?: {
             errorCount++;
             checkedProducts++;
             const msg = err instanceof Error ? err.message : String(err);
-            errorMessages.push(`Product ${target.productId}: ${msg}`);
-            console.warn(`[PriceMonitor] Error monitoring product ${target.productId}:`, err);
-            break; // Stop retrying this target, move to next
+            errorMessages.push(`Target ${target.productId}: ${msg}`);
+            console.warn(`[PriceMonitor] Error monitoring target ${target.productId}:`, err);
+            break;
           }
         }
       }

@@ -94,7 +94,9 @@ export async function createCloudPriceAlert(
     return null;
   }
 
-  const alertId = `alert_${now}_${Math.random().toString(36).slice(2, 7)}`;
+  const alertId = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `${Date.now().toString(16).padStart(8, '0')}-0000-4000-8000-${Math.random().toString(16).slice(2, 14).padStart(12, '0')}`;
   const timestamp = new Date(now).toISOString();
 
   const newAlert: PriceAlert = {

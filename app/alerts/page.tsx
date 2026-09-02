@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Bell,
@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Smartphone,
   X,
+  Target,
 } from "lucide-react";
 import Navbar from "@/app/components/Navbar";
 import Footer from "@/app/components/Footer";
@@ -30,6 +31,8 @@ import {
   type PriceAlert,
 } from "@/lib/price-alerts";
 import { useAuth } from "@/lib/auth/use-auth";
+import { getTrackedTargets, type TrackedTarget } from "@/lib/wishlist";
+import { products } from "@/data/products";
 
 function formatRelativeTime(isoString: string): string {
   try {
@@ -50,6 +53,21 @@ export default function AlertsPage() {
   const alerts = usePriceAlerts();
   const unreadCount = useUnreadAlertsCount();
   const { user, isAuthenticated } = useAuth();
+  const [trackedTargets, setTrackedTargets] = useState<Record<string, TrackedTarget>>({});
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setTrackedTargets(getTrackedTargets());
+
+      const updateTargets = () => {
+        setTrackedTargets(getTrackedTargets());
+      };
+      window.addEventListener("tracked-targets-updated", updateTargets);
+      return () => {
+        window.removeEventListener("tracked-targets-updated", updateTargets);
+      };
+    }
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated && user?.id) {
@@ -149,6 +167,55 @@ export default function AlertsPage() {
           <div className="mt-6">
             <NotificationSettings />
           </div>
+
+          {/* Active Tracked Targets Section */}
+          {Object.keys(trackedTargets).length > 0 && (
+            <div className="mt-6 rounded-2xl border border-gray-200/80 bg-white p-5 shadow-xs">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                    <Target size={16} />
+                  </div>
+                  <div>
+                    <h2 className="text-xs font-bold text-gray-900">
+                      Active Price Targets ({Object.keys(trackedTargets).length})
+                    </h2>
+                    <p className="text-[11px] text-gray-500">
+                      Products being actively monitored for your desired target prices
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3.5 grid gap-2.5 sm:grid-cols-2">
+                {Object.values(trackedTargets).map((target) => {
+                  const product = products.find((p) => p.id === target.productId);
+                  const name = product?.name || target.productId;
+
+                  return (
+                    <Link
+                      key={target.productId}
+                      href={`/product/${target.productId}`}
+                      className="group flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50/70 p-3.5 transition hover:border-blue-200 hover:bg-blue-50/40"
+                    >
+                      <div className="min-w-0 pr-2">
+                        <p className="truncate text-xs font-bold text-gray-900 group-hover:text-blue-600">
+                          {name}
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-gray-500">
+                          Target Price:{" "}
+                          <span className="font-bold text-emerald-600">
+                            {target.targetPrice ? `₹${target.targetPrice.toLocaleString("en-IN")}` : "Any drop"}
+                          </span>
+                        </p>
+                      </div>
+                      <ExternalLink size={14} className="shrink-0 text-gray-400 group-hover:text-blue-600" />
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Alerts List or Empty State */}
           <div className="mt-8 space-y-4">
