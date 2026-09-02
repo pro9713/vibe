@@ -13,14 +13,48 @@ import {
 
 export const dynamic = "force-dynamic";
 
-function getUserIdFromRequest(request: NextRequest, serverUserId?: string): string | null {
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const LEGACY_USER_REGEX = /^usr_[a-z0-9_-]+$/i;
+
+async function getUserIdFromRequest(request: NextRequest, serverUserId?: string): Promise<string | null> {
   if (serverUserId) return serverUserId;
+
   const authHeader = request.headers.get("authorization");
-  if (authHeader && authHeader.startsWith("Bearer usr_")) {
-    return authHeader.replace("Bearer ", "").trim();
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return null;
   }
+
+  const token = authHeader.replace("Bearer ", "").trim();
+  if (!token) return null;
+
+  // 1. Accept standard Supabase UUIDs
+  if (UUID_REGEX.test(token)) {
+    return token;
+  }
+
+  // 2. Accept legacy mock user identifiers (e.g. usr_...)
+  if (LEGACY_USER_REGEX.test(token)) {
+    return token;
+  }
+
+  // 3. If token is a JWT, verify with Supabase server client
+  if (token.split(".").length === 3) {
+    try {
+      const serverClient = await createServerSupabaseClient();
+      const { data: { user }, error } = await serverClient.auth.getUser(token);
+      if (!error && user?.id) {
+        return user.id;
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
   return null;
 }
+
 
 /**
  * GET /api/cloud/sync
@@ -29,7 +63,7 @@ function getUserIdFromRequest(request: NextRequest, serverUserId?: string): stri
 export async function GET(request: NextRequest) {
   try {
     const serverUser = await getServerUser();
-    const userId = getUserIdFromRequest(request, serverUser?.id);
+    const userId = await getUserIdFromRequest(request, serverUser?.id);
 
     if (!userId) {
       return NextResponse.json(
@@ -69,7 +103,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const serverUser = await getServerUser();
-    const userId = getUserIdFromRequest(request, serverUser?.id);
+    const userId = await getUserIdFromRequest(request, serverUser?.id);
 
     if (!userId) {
       return NextResponse.json(
@@ -80,6 +114,18 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => ({}));
     const { action, productId, targetPrice, anonymousData } = body;
+
+    if (action === "get") {
+      const wishlist = await getCloudWishlist(userId);
+      const trackedTargets = await getCloudTrackedTargets(userId);
+      return NextResponse.json({
+        success: true,
+        data: {
+          wishlist,
+          trackedTargets,
+        },
+      });
+    }
 
     if (action === "merge") {
       const merged = await mergeAnonymousData(userId, anonymousData || {});

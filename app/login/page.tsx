@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogIn, Mail, Lock, AlertCircle, ArrowRight, Loader2 } from "lucide-react";
@@ -17,6 +17,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("error") === "auth_callback") {
+        setError("Email verification link was invalid or expired. Please sign in or request a new link.");
+      }
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +47,11 @@ export default function LoginPage() {
       const res = await signInUser(email, password);
 
       if (!res.success) {
-        setError(res.error || "Invalid email or password.");
+        if (res.isEmailUnconfirmed) {
+          setError("Please confirm your email before signing in.");
+        } else {
+          setError(res.error || "Invalid email or password.");
+        }
         setLoading(false);
         return;
       }
@@ -86,7 +99,7 @@ export default function LoginPage() {
                 Welcome back
               </h1>
               <p className="mt-1.5 text-xs text-gray-500">
-                Sign in to your Pricely account to manage alerts and tracked deals
+                Sign in to your Vibe account to manage alerts and tracked deals
               </p>
             </div>
 

@@ -1,15 +1,43 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { Heart, Trash2, ArrowRight } from "lucide-react";
 import { products } from "@/data/products";
 import ProductCard from "../components/ProductCard";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import { useWishlist, clearWishlist } from "@/lib/wishlist";
+import { useWishlist, clearWishlist, syncWithCloud } from "@/lib/wishlist";
+import { getClientUser } from "@/lib/auth";
 
 export default function WishlistPage() {
   const wishlist = useWishlist();
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadCloudWishlist() {
+      const user = await getClientUser();
+      if (user?.id && mounted) {
+        syncWithCloud(user.id).catch(() => {});
+      }
+    }
+
+    loadCloudWishlist();
+
+    const handleAuthChange = (e: Event) => {
+      const user = (e as CustomEvent).detail;
+      if (user?.id && mounted) {
+        syncWithCloud(user.id).catch(() => {});
+      }
+    };
+
+    window.addEventListener("auth-state-changed", handleAuthChange);
+    return () => {
+      mounted = false;
+      window.removeEventListener("auth-state-changed", handleAuthChange);
+    };
+  }, []);
 
   const wishlistProducts = products.filter((product) =>
     wishlist.includes(product.id)

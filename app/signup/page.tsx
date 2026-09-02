@@ -19,6 +19,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,6 +47,13 @@ export default function SignupPage() {
 
       if (!res.success) {
         setError(res.error || "Failed to create account.");
+        setLoading(false);
+        return;
+      }
+
+      // Check if email confirmation is required by Supabase
+      if (res.needsConfirmation) {
+        setNeedsConfirmation(true);
         setLoading(false);
         return;
       }
@@ -93,7 +101,7 @@ export default function SignupPage() {
                 <Sparkles size={24} />
               </div>
               <h1 className="text-2xl font-black text-gray-900">
-                Create your Pricely Account
+                Create your Vibe Account
               </h1>
               <p className="mt-1.5 text-xs text-gray-500">
                 Sync price alerts and tracked deals across all your devices
@@ -107,7 +115,28 @@ export default function SignupPage() {
               </div>
             )}
 
-            {success ? (
+            {needsConfirmation ? (
+              <div className="text-center py-4 space-y-4">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 mb-1">
+                  <Mail size={24} />
+                </div>
+                <h3 className="text-base font-bold text-gray-900">
+                  Check your email to confirm your Vibe account.
+                </h3>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  We sent a confirmation link to <span className="font-semibold text-gray-900">{email}</span>. Please click the link to activate your account and start tracking deals.
+                </p>
+                <div className="pt-2">
+                  <Link
+                    href="/login"
+                    className="inline-flex items-center justify-center gap-2 w-full rounded-xl bg-blue-600 py-3 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 active:scale-95"
+                  >
+                    <span>Return to Login</span>
+                    <ArrowRight size={14} />
+                  </Link>
+                </div>
+              </div>
+            ) : success ? (
               <div className="text-center py-6">
                 <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-green-50 text-green-600 mb-3">
                   <CheckCircle2 size={24} />

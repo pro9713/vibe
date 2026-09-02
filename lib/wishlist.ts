@@ -2,11 +2,26 @@
 
 import { useSyncExternalStore } from "react";
 import { getClientUser } from "./auth";
+import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 export const WISHLIST_KEY = "pricely-wishlist";
 export const TRACKED_TARGETS_KEY = "pricely-tracked-targets";
+export const ACTIVE_USER_ID_KEY = "pricely-active-user-id";
 
 const emptyArray: string[] = [];
+
+// Helper to mark active storage key for guest if unassigned
+function ensureGuestActiveKey(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const active = window.localStorage.getItem(ACTIVE_USER_ID_KEY);
+    if (!active) {
+      window.localStorage.setItem(ACTIVE_USER_ID_KEY, "guest");
+    }
+  } catch {
+    // Ignore error
+  }
+}
 
 // Helper to notify cloud if authenticated (fire-and-forget safe)
 async function sendCloudMutation(action: string, payload: Record<string, unknown>) {
@@ -73,6 +88,7 @@ export function toggleWishlist(productId: string): boolean {
   }
 
   try {
+    ensureGuestActiveKey();
     const current = getWishlist();
     const isAlreadyWishlisted = current.includes(productId);
     const updated = isAlreadyWishlisted
@@ -80,6 +96,9 @@ export function toggleWishlist(productId: string): boolean {
       : [...current, productId];
 
     window.localStorage.setItem(WISHLIST_KEY, JSON.stringify(updated));
+    cachedWishlistRaw = JSON.stringify(updated);
+    cachedWishlistSnapshot = updated;
+
     window.dispatchEvent(
       new CustomEvent("wishlist-updated", {
         detail: { productId, wishlisted: !isAlreadyWishlisted, count: updated.length },
@@ -105,10 +124,14 @@ export function addToWishlist(productId: string): void {
   }
 
   try {
+    ensureGuestActiveKey();
     const current = getWishlist();
     if (!current.includes(productId)) {
       const updated = [...current, productId];
       window.localStorage.setItem(WISHLIST_KEY, JSON.stringify(updated));
+      cachedWishlistRaw = JSON.stringify(updated);
+      cachedWishlistSnapshot = updated;
+
       window.dispatchEvent(
         new CustomEvent("wishlist-updated", {
           detail: { productId, wishlisted: true, count: updated.length },
@@ -134,6 +157,9 @@ export function removeFromWishlist(productId: string): void {
     const current = getWishlist();
     const updated = current.filter((id) => id !== productId);
     window.localStorage.setItem(WISHLIST_KEY, JSON.stringify(updated));
+    cachedWishlistRaw = JSON.stringify(updated);
+    cachedWishlistSnapshot = updated;
+
     window.dispatchEvent(
       new CustomEvent("wishlist-updated", {
         detail: { productId, wishlisted: false, count: updated.length },
@@ -147,7 +173,7 @@ export function removeFromWishlist(productId: string): void {
 }
 
 /**
- * Clears the entire wishlist.
+ * Clears the entire active wishlist.
  */
 export function clearWishlist(): void {
   if (typeof window === "undefined") {
@@ -156,10 +182,34 @@ export function clearWishlist(): void {
 
   try {
     window.localStorage.removeItem(WISHLIST_KEY);
+    cachedWishlistRaw = null;
+    cachedWishlistSnapshot = emptyArray;
     window.dispatchEvent(new CustomEvent("wishlist-updated", { detail: { count: 0 } }));
     sendCloudMutation("clear-wishlist", {});
   } catch (error) {
     console.error("Error clearing wishlist in localStorage:", error);
+  }
+}
+
+/**
+ * Resets local wishlist and targets on sign out to ensure account isolation.
+ * Prevents the next guest or user from seeing previous user's data.
+ */
+export function resetLocalWishlistState(): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.removeItem(WISHLIST_KEY);
+    window.localStorage.removeItem(TRACKED_TARGETS_KEY);
+    window.localStorage.setItem(ACTIVE_USER_ID_KEY, "guest");
+
+    cachedWishlistRaw = null;
+    cachedWishlistSnapshot = emptyArray;
+
+    window.dispatchEvent(new CustomEvent("wishlist-updated", { detail: { count: 0 } }));
+    window.dispatchEvent(new CustomEvent("tracked-targets-updated", { detail: { targets: {} } }));
+  } catch (error) {
+    console.error("Error resetting local wishlist state on sign out:", error);
   }
 }
 
@@ -232,6 +282,7 @@ export function setTrackedTarget(productId: string, targetPrice?: number): Track
   all[productId] = newTarget;
 
   if (typeof window !== "undefined") {
+    ensureGuestActiveKey();
     window.localStorage.setItem(TRACKED_TARGETS_KEY, JSON.stringify(all));
     // Also add to wishlist if not already wishlisted
     addToWishlist(productId);
@@ -283,9 +334,15 @@ export function useTrackedTarget(productId: string): TrackedTarget | null {
 // CLOUD SYNC & MERGE UTILITY
 // -------------------------------------------------------------
 
+let inFlightSyncPromise: Promise<{
+  wishlist: string[];
+  trackedTargets: Record<string, TrackedTarget>;
+} | null> | null = null;
+
 /**
  * Synchronizes local state with cloud state upon login/mount.
  * Merges local anonymous items into the cloud account, then updates localStorage cache.
+ * Fully deduplicated to prevent concurrent duplicate API requests.
  */
 export async function syncWithCloud(userId?: string): Promise<{
   wishlist: string[];
@@ -293,55 +350,127 @@ export async function syncWithCloud(userId?: string): Promise<{
 } | null> {
   if (typeof window === "undefined") return null;
 
-  try {
-    const user = userId ? { id: userId } : await getClientUser();
-    if (!user) return null;
-
-    const localWishlist = getWishlist();
-    const localTargets = getTrackedTargets();
-
-    const res = await fetch("/api/cloud/sync", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${user.id}`,
-      },
-      body: JSON.stringify({
-        action: "merge",
-        anonymousData: {
-          wishlist: localWishlist,
-          trackedTargets: localTargets,
-        },
-      }),
-    });
-
-    if (!res.ok) return null;
-
-    const json = await res.json();
-    if (json.success && json.data) {
-      const { wishlist, trackedTargets } = json.data;
-
-      // Update local storage cache
-      if (Array.isArray(wishlist)) {
-        window.localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlist));
-        window.dispatchEvent(
-          new CustomEvent("wishlist-updated", { detail: { count: wishlist.length } })
-        );
-      }
-
-      if (trackedTargets && typeof trackedTargets === "object") {
-        window.localStorage.setItem(TRACKED_TARGETS_KEY, JSON.stringify(trackedTargets));
-        window.dispatchEvent(
-          new CustomEvent("tracked-targets-updated", { detail: { targets: trackedTargets } })
-        );
-      }
-
-      return json.data;
-    }
-
-    return null;
-  } catch (err) {
-    console.warn("[CloudSync] Background sync skipped:", err);
-    return null;
+  if (inFlightSyncPromise) {
+    return inFlightSyncPromise;
   }
+
+  inFlightSyncPromise = (async () => {
+    try {
+      const user = userId ? { id: userId } : await getClientUser();
+      if (!user) return null;
+
+      const prevOwner = window.localStorage.getItem(ACTIVE_USER_ID_KEY);
+
+      // If the local cache belongs to a DIFFERENT authenticated user, wipe it first
+      // so User A's items are never merged into User B's account!
+      if (prevOwner && prevOwner !== "guest" && prevOwner !== user.id) {
+        window.localStorage.removeItem(WISHLIST_KEY);
+        window.localStorage.removeItem(TRACKED_TARGETS_KEY);
+      }
+
+      // Only merge anonymous data if the previous owner was a legitimate guest
+      const isLegitimateGuest = !prevOwner || prevOwner === "guest";
+      const localWishlist = isLegitimateGuest ? getWishlist() : [];
+      const localTargets = isLegitimateGuest ? getTrackedTargets() : {};
+
+      const hasGuestData = localWishlist.length > 0 || Object.keys(localTargets).length > 0;
+
+      const res = await fetch("/api/cloud/sync", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.id}`,
+        },
+        body: JSON.stringify({
+          action: hasGuestData ? "merge" : "get",
+          anonymousData: hasGuestData
+            ? {
+                wishlist: localWishlist,
+                trackedTargets: localTargets,
+              }
+            : {},
+        }),
+      });
+
+      if (!res.ok) return null;
+
+      const json = await res.json();
+      if (json.success && json.data) {
+        const { wishlist, trackedTargets } = json.data;
+
+        // Set active user identifier
+        window.localStorage.setItem(ACTIVE_USER_ID_KEY, user.id);
+
+        // Update local storage cache
+        if (Array.isArray(wishlist)) {
+          window.localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlist));
+          window.localStorage.setItem(`pricely-wishlist-${user.id}`, JSON.stringify(wishlist));
+          cachedWishlistRaw = JSON.stringify(wishlist);
+          cachedWishlistSnapshot = wishlist;
+          window.dispatchEvent(
+            new CustomEvent("wishlist-updated", { detail: { count: wishlist.length } })
+          );
+        }
+
+        if (trackedTargets && typeof trackedTargets === "object") {
+          window.localStorage.setItem(TRACKED_TARGETS_KEY, JSON.stringify(trackedTargets));
+          window.localStorage.setItem(`pricely-tracked-targets-${user.id}`, JSON.stringify(trackedTargets));
+          window.dispatchEvent(
+            new CustomEvent("tracked-targets-updated", { detail: { targets: trackedTargets } })
+          );
+        }
+
+        return json.data;
+      }
+
+      return null;
+    } catch (err) {
+      console.warn("[CloudSync] Background sync skipped:", err);
+      return null;
+    } finally {
+      inFlightSyncPromise = null;
+    }
+  })();
+
+  return inFlightSyncPromise;
+}
+
+// -------------------------------------------------------------
+// REACTIVE AUTH LISTENER FOR WISHLIST & CLOUD ISOLATION
+// -------------------------------------------------------------
+
+let authListenerInitialized = false;
+
+export function initWishlistAuthListener(): void {
+  if (typeof window === "undefined" || authListenerInitialized) return;
+  authListenerInitialized = true;
+
+  // 1. Custom auth-state-changed event
+  window.addEventListener("auth-state-changed", (e: Event) => {
+    const user = (e as CustomEvent).detail;
+    if (user?.id) {
+      syncWithCloud(user.id).catch(() => {});
+    } else {
+      resetLocalWishlistState();
+    }
+  });
+
+  // 2. Supabase onAuthStateChange
+  try {
+    const supabase = createBrowserSupabaseClient();
+    supabase.auth.onAuthStateChange(async (event: string, session: { user?: { id: string } } | null) => {
+      const activeUser = window.localStorage.getItem(ACTIVE_USER_ID_KEY);
+      if (session?.user?.id && (event === "SIGNED_IN" || activeUser !== session.user.id)) {
+        await syncWithCloud(session.user.id).catch(() => {});
+      } else if (event === "SIGNED_OUT" || (!session && activeUser && activeUser !== "guest")) {
+        resetLocalWishlistState();
+      }
+    });
+  } catch {
+    // Ignore if Supabase client not initialized
+  }
+}
+
+if (typeof window !== "undefined") {
+  initWishlistAuthListener();
 }

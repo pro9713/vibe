@@ -91,9 +91,15 @@ export async function signUpUser(email: string, password: string): Promise<{
 
   try {
     const supabase = createBrowserSupabaseClient();
+    const emailRedirectTo =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/auth/callback`
+        : undefined;
+
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
+      options: emailRedirectTo ? { emailRedirectTo } : undefined,
     });
 
     if (error) {
@@ -126,6 +132,7 @@ export async function signInUser(email: string, password: string): Promise<{
   success: boolean;
   user?: AuthUser;
   error?: string;
+  isEmailUnconfirmed?: boolean;
 }> {
   if (!email || !email.includes("@")) {
     return { success: false, error: "Please enter a valid email address." };
@@ -155,6 +162,14 @@ export async function signInUser(email: string, password: string): Promise<{
     });
 
     if (error) {
+      const msg = (error.message || "").toLowerCase();
+      if (msg.includes("email not confirmed") || msg.includes("unconfirmed")) {
+        return {
+          success: false,
+          error: "Please confirm your email before signing in.",
+          isEmailUnconfirmed: true,
+        };
+      }
       return { success: false, error: "Invalid email or password." };
     }
 
@@ -187,7 +202,17 @@ export async function signOutUser(): Promise<void> {
   }
 
   if (typeof window !== "undefined") {
+    // Clear local auth mock user
     window.localStorage.removeItem(MOCK_USER_STORAGE_KEY);
+
+    // Safely clear active user's local wishlist and tracked targets so the next guest/user cannot see them
+    window.localStorage.removeItem("pricely-wishlist");
+    window.localStorage.removeItem("pricely-tracked-targets");
+    window.localStorage.setItem("pricely-active-user-id", "guest");
+
+    // Dispatch auth state change event (which triggers wishlist reset & reactive listeners)
     window.dispatchEvent(new CustomEvent("auth-state-changed", { detail: null }));
+    window.dispatchEvent(new CustomEvent("wishlist-updated", { detail: { count: 0 } }));
+    window.dispatchEvent(new CustomEvent("tracked-targets-updated", { detail: { targets: {} } }));
   }
 }
