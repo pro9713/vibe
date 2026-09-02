@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="iconBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#F1F5F9" />
+    </linearGradient>
+
+    <!-- Orange V -->
+    <linearGradient id="iconV" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#FF7A3D" />
+      <stop offset="40%" stop-color="#FF5722" />
+      <stop offset="100%" stop-color="#D83A00" />
+    </linearGradient>
+
+    <!-- Blue ibe -->
+    <linearGradient id="iconBlue" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#42A5F5" />
+      <stop offset="45%" stop-color="#1E88E5" />
+      <stop offset="100%" stop-color="#0D47A1" />
+    </linearGradient>
+
+    <!-- Smile Halo -->
+    <linearGradient id="iconSmile" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFA726" />
+      <stop offset="100%" stop-color="#FF5722" />
+    </linearGradient>
+
+    <filter id="iconShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#0F172A" flood-opacity="0.2" />
+    </filter>
+  </defs>
+
+  <!-- App Icon Background -->
+  <rect width="128" height="128" rx="28" fill="url(#iconBg)" />
+  <rect width="128" height="128" rx="28" stroke="#E2E8F0" stroke-width="1.5" />
+
+  <!-- 3D Vibe Logo Centered -->
+  <g transform="translate(14, 22) scale(0.36)" filter="url(#iconShadow)">
+    <!-- Smile Arc -->
+    <g transform="translate(112, 10)">
+      <path d="M6 34 C 6 8, 48 8, 48 34" stroke="url(#iconSmile)" stroke-width="8" stroke-linecap="round" fill="none" />
+      <path d="M17 18 C 17 14, 23 14, 23 18" stroke="url(#iconSmile)" stroke-width="4" stroke-linecap="round" fill="none" />
+      <path d="M31 18 C 31 14, 37 14, 37 18" stroke="url(#iconSmile)" stroke-width="4" stroke-linecap="round" fill="none" />
+      <path d="M19 26 C 23 31, 31 31, 35 26" stroke="url(#iconSmile)" stroke-width="4" stroke-linecap="round" fill="none" />
+    </g>
+
+    <!-- V -->
+    <g transform="translate(24, 28)">
+      <path d="M12 10 C 18 10, 24 14, 26 22 L 39 64 C 41 71, 49 71, 51 64 L 64 22 C 66 14, 72 10, 78 10 C 86 10, 92 18, 88 28 L 62 82 C 56 94, 34 94, 28 82 L 2 28 C -2 18, 4 10, 12 10 Z" fill="url(#iconV)" />
+    </g>
+
+    <!-- i -->
+    <g transform="translate(126, 48)">
+      <rect x="0" y="8" width="22" height="52" rx="11" fill="url(#iconBlue)" />
+    </g>
+
+    <!-- b -->
+    <g transform="translate(154, 30)">
+      <rect x="0" y="0" width="22" height="70" rx="11" fill="url(#iconBlue)" />
+      <path d="M12 26 C 22 22, 48 22, 54 36 C 60 48, 58 64, 46 72 C 34 78, 18 76, 12 70 Z" fill="url(#iconBlue)" />
+    </g>
+
+    <!-- e -->
+    <g transform="translate(216, 48)">
+      <path d="M26 8 C 42 8, 50 18, 50 32 C 50 36, 47 38, 42 38 L 8 38 C 8 46, 16 52, 28 52 C 36 52, 42 48, 46 44 C 48 42, 52 42, 54 45 C 56 48, 54 52, 50 56 C 42 63, 32 64, 24 64 C 8 64, -2 50, 0 34 C 2 18, 12 8, 26 8 Z M 38 28 C 38 20, 32 16, 24 16 C 16 16, 10 21, 9 28 L 38 28 Z" fill="url(#iconBlue)" />
+    </g>
+  </g>
+</svg>

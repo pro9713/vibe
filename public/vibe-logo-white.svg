@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 120" fill="none" width="100%" height="100%">
+  <defs>
+    <!-- Orange 3D 'V' Gradient -->
+    <linearGradient id="whiteBgOrangeV" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#FF7A3D" />
+      <stop offset="40%" stop-color="#FF5722" />
+      <stop offset="100%" stop-color="#E64A19" />
+    </linearGradient>
+    <linearGradient id="whiteBgHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Blue 3D 'ibe' Gradient -->
+    <linearGradient id="whiteBgBlueGrad" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#64B5F6" />
+      <stop offset="45%" stop-color="#2196F3" />
+      <stop offset="100%" stop-color="#1976D2" />
+    </linearGradient>
+
+    <!-- Smile Arc Gradient -->
+    <linearGradient id="whiteBgSmileGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFB74D" />
+      <stop offset="50%" stop-color="#FF8A65" />
+      <stop offset="100%" stop-color="#FF7043" />
+    </linearGradient>
+
+    <filter id="whiteBgShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#000000" flood-opacity="0.4" />
+    </filter>
+  </defs>
+
+  <g filter="url(#whiteBgShadow)">
+    <!-- SMILEY HALO OVER 'i' -->
+    <g transform="translate(112, 10)">
+      <path d="M6 34 C 6 8, 48 8, 48 34" stroke="url(#whiteBgSmileGrad)" stroke-width="7" stroke-linecap="round" fill="none" />
+      <path d="M10 32 C 10 12, 44 12, 44 32" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-opacity="0.7" fill="none" />
+      <path d="M17 18 C 17 14, 23 14, 23 18" stroke="url(#whiteBgSmileGrad)" stroke-width="3.5" stroke-linecap="round" fill="none" />
+      <path d="M31 18 C 31 14, 37 14, 37 18" stroke="url(#whiteBgSmileGrad)" stroke-width="3.5" stroke-linecap="round" fill="none" />
+      <path d="M19 26 C 23 31, 31 31, 35 26" stroke="url(#whiteBgSmileGrad)" stroke-width="3.5" stroke-linecap="round" fill="none" />
+    </g>
+
+    <!-- LETTER 'V' -->
+    <g transform="translate(24, 28)">
+      <path d="M12 10 C 18 10, 24 14, 26 22 L 39 64 C 41 71, 49 71, 51 64 L 64 22 C 66 14, 72 10, 78 10 C 86 10, 92 18, 88 28 L 62 82 C 56 94, 34 94, 28 82 L 2 28 C -2 18, 4 10, 12 10 Z" fill="url(#whiteBgOrangeV)" />
+      <path d="M14 14 C 18 14, 22 17, 24 23 L 34 56 C 31 52, 28 36, 22 24 C 18 16, 12 16, 14 14 Z" fill="url(#whiteBgHighlight)" />
+      <path d="M76 14 C 80 14, 82 18, 80 24 L 56 74 C 58 68, 62 52, 68 34 C 72 20, 74 16, 76 14 Z" fill="url(#whiteBgHighlight)" opacity="0.85" />
+    </g>
+
+    <!-- LETTER 'i' -->
+    <g transform="translate(126, 48)">
+      <rect x="0" y="8" width="22" height="52" rx="11" fill="url(#whiteBgBlueGrad)" />
+      <rect x="4" y="12" width="7" height="38" rx="3.5" fill="url(#whiteBgHighlight)" />
+    </g>
+
+    <!-- LETTER 'b' -->
+    <g transform="translate(154, 30)">
+      <rect x="0" y="0" width="22" height="70" rx="11" fill="url(#whiteBgBlueGrad)" />
+      <path d="M12 26 C 22 22, 48 22, 54 36 C 60 48, 58 64, 46 72 C 34 78, 18 76, 12 70 Z" fill="url(#whiteBgBlueGrad)" />
+      <circle cx="28" cy="49" r="10" fill="#FFFFFF" fill-opacity="0.2" />
+      <rect x="4" y="6" width="6" height="40" rx="3" fill="url(#whiteBgHighlight)" />
+      <path d="M22 30 C 34 27, 48 30, 50 40" stroke="url(#whiteBgHighlight)" stroke-width="4" stroke-linecap="round" fill="none" />
+    </g>
+
+    <!-- LETTER 'e' -->
+    <g transform="translate(216, 48)">
+      <path d="M26 8 C 42 8, 50 18, 50 32 C 50 36, 47 38, 42 38 L 8 38 C 8 46, 16 52, 28 52 C 36 52, 42 48, 46 44 C 48 42, 52 42, 54 45 C 56 48, 54 52, 50 56 C 42 63, 32 64, 24 64 C 8 64, -2 50, 0 34 C 2 18, 12 8, 26 8 Z M 38 28 C 38 20, 32 16, 24 16 C 16 16, 10 21, 9 28 L 38 28 Z" fill="url(#whiteBgBlueGrad)" />
+      <path d="M16 14 C 26 12, 34 14, 38 22" stroke="url(#whiteBgHighlight)" stroke-width="3.5" stroke-linecap="round" fill="none" />
+    </g>
+  </g>
+</svg>

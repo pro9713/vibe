@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+:root {
+  --primary-orange: #FF5126;
+  --primary-blue: #1A73E8;
+  --accent-yellow: #FFB703;
+  --bg-main: #F8F9FA;
+  --bg-footer: #051937;
+  --background: #F8F9FA;
+  --foreground: #0F172A;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* VIBE 3D LOADER KEYFRAMES & ANIMATIONS */
+@keyframes vibeFloat {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-7px) scale(1.02);
+  }
+}
+
+@keyframes vibeGlow {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes vibeTaglineIn {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes vibePulseShimmer {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scaleX(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+.animate-vibe-float {
+  animation: vibeFloat 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-vibe-glow {
+  animation: vibeGlow 2.4s ease-in-out infinite;
+}
+
+.animate-vibe-tagline {
+  animation: vibeTaglineIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-vibe-shimmer {
+  animation: vibePulseShimmer 1.8s ease-in-out infinite;
+}
+
+/* Accessibility: Respect Reduced Motion Preferences */
+@media (prefers-reduced-motion: reduce) {
+  .animate-vibe-float,
+  .animate-vibe-glow,
+  .animate-vibe-tagline,
+  .animate-vibe-shimmer {
+    animation: none !important;
+    transform: none !important;
+    transition: opacity 0.15s ease-out !important;
+  }
+}
