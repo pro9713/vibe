@@ -2,7 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ShieldCheck, Star, CheckCircle2 } from "lucide-react";
-import { products } from "@/data/products";
+import { getProductById } from "@/lib/data";
+import { getCachedLiveProduct } from "@/lib/quickcommerce/live-product-cache";
+import { tagProductAmazonOffers } from "@/lib/affiliate/amazon";
 import PriceHistoryV2 from "@/app/components/PriceHistoryV2";
 import RecentlyViewedTracker from "@/app/components/RecentlyViewedTracker";
 import Navbar from "@/app/components/Navbar";
@@ -18,11 +20,13 @@ type PageProps = {
 export default async function ProductPage({ params }: PageProps) {
   const { id } = await params;
 
-  const product = products.find((p) => p.id === id);
+  const rawProduct = (await getProductById(id)) || getCachedLiveProduct(id);
 
-  if (!product) {
+  if (!rawProduct) {
     notFound();
   }
+
+  const product = tagProductAmazonOffers(rawProduct);
 
   const prices = product.offers;
   const bestPrice = prices.length > 0 ? Math.min(...prices.map((p) => p.price)) : 0;
@@ -133,6 +137,13 @@ export default async function ProductPage({ params }: PageProps) {
 
               {/* Price History V2 Component */}
               <PriceHistoryV2 product={product} />
+
+              {/* Amazon Affiliate Disclosure Note */}
+              <div className="rounded-2xl border border-gray-200/70 bg-white/60 p-4 text-xs text-gray-500 text-center shadow-xs">
+                <p>
+                  As an Amazon Associate I earn from qualifying purchases.
+                </p>
+              </div>
             </div>
           </div>
         </div>

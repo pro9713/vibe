@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bagGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+  <rect width="400" height="400" rx="32" fill="#f0f9ff"/>
+  <g filter="url(#shadow)" transform="translate(100, 60)">
+    <!-- Top handle -->
+    <path d="M75,35 C75,10 125,10 125,35" fill="none" stroke="#075985" stroke-width="8" stroke-linecap="round"/>
+    <!-- Main body -->
+    <rect x="35" y="35" width="130" height="210" rx="28" fill="url(#bagGrad)"/>
+    <!-- Front pocket -->
+    <rect x="50" y="125" width="100" height="105" rx="16" fill="#0369a1"/>
+    <path d="M50,150 L150,150" stroke="#38bdf8" stroke-width="3" stroke-dasharray="6,4"/>
+    <!-- Zipper accent -->
+    <path d="M60,65 Q100,75 140,65" stroke="#bae6fd" stroke-width="3"/>
+    <!-- Side mesh pockets -->
+    <rect x="25" y="140" width="10" height="60" rx="4" fill="#075985" opacity="0.7"/>
+    <rect x="165" y="140" width="10" height="60" rx="4" fill="#075985" opacity="0.7"/>
+    <!-- Brand badge -->
+    <rect x="85" y="165" width="30" height="14" rx="4" fill="#ffffff" opacity="0.9"/>
+  </g>
+</svg>

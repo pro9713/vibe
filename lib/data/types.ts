@@ -98,13 +98,19 @@ export function createProduct(input: RawProductInput): Product {
       ? availableOffers.reduce((best, curr) => (curr.price < best.price ? curr : best))
       : input.offers[0] || { store: "Unavailable", price: 0, currency: "INR", url: "#", availability: false };
 
+  const history = input.priceHistory || [];
+
   return {
     ...input,
+    rating: input.rating !== undefined ? Number(input.rating) : 0,
+    reviews: input.reviews !== undefined ? Number(input.reviews) : 0,
+    trustScore: input.trustScore !== undefined ? Number(input.trustScore) : 0,
+    priceHistory: history,
     bestDeal: input.bestDeal || {
       store: bestOffer.store,
       price: bestOffer.price,
     },
     prices: input.offers,
-    history: input.priceHistory,
+    history,
   };
 }

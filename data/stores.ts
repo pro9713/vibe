@@ -1,5 +1,5 @@
-import { LOCAL_TRUSTED_STORES } from "@/lib/data/providers/local-store.provider";
-import type { Store } from "@/lib/data/types";
+import { LOCAL_TRUSTED_STORES } from "../lib/data/providers/local-store.provider.ts";
+import type { Store } from "../lib/data/types.ts";
 
 export type { Store };
 

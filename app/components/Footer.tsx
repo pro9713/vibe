@@ -80,8 +80,15 @@ export default function Footer() {
           </div>
         </div>
 
+        {/* Affiliate Disclosure */}
+        <div className="mt-8 border-t border-slate-800/60 pt-6 text-center text-xs text-slate-400">
+          <p>
+            As an Amazon Associate I earn from qualifying purchases.
+          </p>
+        </div>
+
         {/* Bottom Bar */}
-        <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+        <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
           <p>© 2026 Vibe. All rights reserved.</p>
           <p className="flex items-center gap-2">
             <span>Built for smart fashion shoppers</span>

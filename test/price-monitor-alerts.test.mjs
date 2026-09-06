@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "fs";
 import { createClient } from "@supabase/supabase-js";
-import { runPriceMonitoringJob, clearMonitoredRegistry } from "../lib/price-monitor.js";
-import { clearCloudAlertsStore, getCloudPriceAlerts } from "../lib/cloud/price-alerts.js";
+import { runPriceMonitoringJob, clearMonitoredRegistry } from "../lib/price-monitor.ts";
+import { clearCloudAlertsStore, getCloudPriceAlerts } from "../lib/cloud/price-alerts.ts";
 
 // Read Supabase config
 const envContent = fs.readFileSync(".env.local", "utf-8");

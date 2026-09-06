@@ -1,8 +1,8 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { getClientUser } from "./auth";
-import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { getClientUser } from "./auth/index.ts";
+import { createBrowserSupabaseClient } from "./supabase/client.ts";
 
 export const WISHLIST_KEY = "pricely-wishlist";
 export const TRACKED_TARGETS_KEY = "pricely-tracked-targets";

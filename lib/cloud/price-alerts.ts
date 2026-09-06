@@ -1,5 +1,5 @@
-import { type PriceAlert, type AlertType } from "@/lib/price-alerts";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { type PriceAlert, type AlertType } from "../price-alerts.ts";
+import { createAdminSupabaseClient } from "../supabase/admin.ts";
 
 const MAX_CLOUD_ALERTS = 50;
 const DEDUPLICATION_WINDOW_MS = 2 * 60 * 60 * 1000; // 2 hours deduplication window

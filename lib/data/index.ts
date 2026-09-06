@@ -1,15 +1,16 @@
-import { LocalProductProvider } from "./providers/local-product.provider";
-import { LocalStoreProvider } from "./providers/local-store.provider";
-import { QuickCommerceProductProvider } from "./providers/quickcommerce-product.provider";
-import type { ProductProvider, StoreProvider } from "./provider.interface";
-import type { Product, Store, StoreOffer, PriceHistoryItem, ProductFilterOptions } from "./types";
+import { LocalProductProvider } from "./providers/local-product.provider.ts";
+import { LocalStoreProvider } from "./providers/local-store.provider.ts";
+import { QuickCommerceProductProvider } from "./providers/quickcommerce-product.provider.ts";
+import type { ProductProvider, StoreProvider } from "./provider.interface.ts";
+import type { Product, Store, StoreOffer, PriceHistoryItem, ProductFilterOptions } from "./types.ts";
 
 // Re-export core types, interfaces and all provider implementations
-export * from "./types";
-export * from "./provider.interface";
-export * from "./providers/local-product.provider";
-export * from "./providers/local-store.provider";
-export * from "./providers/quickcommerce-product.provider";
+export * from "./types.ts";
+export * from "./provider.interface.ts";
+export * from "./providers/local-product.provider.ts";
+export * from "./providers/local-store.provider.ts";
+export * from "./providers/quickcommerce-product.provider.ts";
+export * from "./providers/database-product.provider.ts";
 
 /**
  * ============================================================================

@@ -1,9 +1,9 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import type { PriceHistoryItem } from "@/lib/data/types";
-import { products } from "@/data/products";
-import { evaluatePriceSnapshot } from "./price-alerts";
+import type { PriceHistoryItem } from "./data/types.ts";
+import { products } from "../data/products.ts";
+import { evaluatePriceSnapshot } from "./price-alerts.ts";
 
 export const PRICE_HISTORY_STORAGE_KEY = "pricely-price-history";
 const MAX_SNAPSHOTS_PER_PRODUCT = 50;

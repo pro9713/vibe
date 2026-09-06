@@ -9,7 +9,7 @@ import {
   QuickCommerceCreditsExhaustedError,
   QuickCommerceRateLimitError,
   QuickCommerceValidationError,
-} from "./types";
+} from "./types.ts";
 
 const QUICKCOMMERCE_BASE_URL = "https://api.quickcommerceapi.com";
 const DEFAULT_TIMEOUT_MS = 10000;

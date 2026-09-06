@@ -1,11 +1,11 @@
-import { getQuickCommerceClient } from "./client";
-import { normalizeQuickCommerceProduct } from "./normalizer";
-import { products } from "@/data/products";
-import { trustedStores } from "@/data/stores";
-import { getBestTrustedDeal, analyzeDeals, getCheapestOffer } from "@/data/dealEngine";
-import { calculateProductMatchConfidence } from "@/lib/search/productMatcher";
-import type { Product, StoreOffer } from "@/lib/data/types";
-import { type SupportedPlatform, validatePlatform } from "./types";
+import { getQuickCommerceClient } from "./client.ts";
+import { normalizeQuickCommerceProduct } from "./normalizer.ts";
+import { products } from "../../data/products.ts";
+import { trustedStores } from "../../data/stores.ts";
+import { getBestTrustedDeal, analyzeDeals, getCheapestOffer } from "../../data/dealEngine.ts";
+import { calculateProductMatchConfidence } from "../search/productMatcher.ts";
+import type { Product, StoreOffer } from "../data/types.ts";
+import { type SupportedPlatform, validatePlatform } from "./types.ts";
 
 export interface ComparisonResult {
   success: boolean;

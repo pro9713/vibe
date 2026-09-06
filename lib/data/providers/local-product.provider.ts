@@ -1,233 +1,28 @@
-import type { ProductProvider } from "../provider.interface";
-import { createProduct, type Product, type ProductFilterOptions } from "../types";
+import type { ProductProvider } from "../provider.interface.ts";
+import type { Product, ProductFilterOptions } from "../types.ts";
+import { CATALOG_PRODUCTS } from "./catalog-data.ts";
+import { DatabaseProductProvider } from "./database-product.provider.ts";
+import { getCachedLiveProduct } from "../../quickcommerce/live-product-cache.ts";
+
+export { CATALOG_PRODUCTS };
 
 /**
  * Local Product Dataset
  *
- * Seed dataset of fashion, shoes, watches, and men's apparel.
+ * Curated dataset of 52 verified products across Shoes, Men, Women, Watches, Bags, and Beauty.
  */
-export const LOCAL_PRODUCTS: Product[] = [
-  createProduct({
-    id: "air-max-270",
-    name: "Air Max 270",
-    brand: "Nike",
-    category: "Shoes",
-    description: "Lightweight running shoes with premium Max Air cushioning and breathable engineered mesh upper.",
-    rating: 4.5,
-    reviews: 1200,
-    trustScore: 92,
-    image: "/images/products/nike-air-max.png",
-    images: ["/images/products/nike-air-max.png"],
-    offers: [
-      {
-        store: "Amazon",
-        price: 2499,
-        originalPrice: 3499,
-        currency: "INR",
-        url: "https://www.amazon.in",
-        affiliateUrl: "https://www.amazon.in?tag=pricelyindia-21",
-        availability: true,
-        lastUpdated: "2026-08-30T18:00:00Z",
-      },
-      {
-        store: "Flipkart",
-        price: 2549,
-        originalPrice: 3499,
-        currency: "INR",
-        url: "https://www.flipkart.com",
-        affiliateUrl: "https://www.flipkart.com?affid=pricely",
-        availability: true,
-        lastUpdated: "2026-08-30T18:00:00Z",
-      },
-      {
-        store: "Myntra",
-        price: 2599,
-        originalPrice: 3499,
-        currency: "INR",
-        url: "https://www.myntra.com",
-        affiliateUrl: "https://www.myntra.com",
-        availability: true,
-        lastUpdated: "2026-08-30T18:00:00Z",
-      },
-      {
-        store: "AJIO",
-        price: 2699,
-        originalPrice: 3499,
-        currency: "INR",
-        url: "https://www.ajio.com",
-        affiliateUrl: "https://www.ajio.com",
-        availability: true,
-        lastUpdated: "2026-08-30T18:00:00Z",
-      },
-    ],
-    priceHistory: [
-      { month: "May 2026", price: 3199 },
-      { month: "June 2026", price: 2999 },
-      { month: "July 2026", price: 2799 },
-      { month: "August 2026", price: 2499 },
-    ],
-  }),
+export const LOCAL_PRODUCTS: Product[] = CATALOG_PRODUCTS;
 
-  createProduct({
-    id: "rs-x-sneakers",
-    name: "RS-X Sneakers",
-    brand: "Puma",
-    category: "Shoes",
-    description: "Bold lifestyle sneakers with retro running silhouette, chunky aesthetic, and superior PU midsole comfort.",
-    rating: 4.4,
-    reviews: 850,
-    trustScore: 89,
-    image: "/images/products/adidas-ultraboost.jpg",
-    images: ["/images/products/adidas-ultraboost.jpg"],
-    offers: [
-      {
-        store: "Myntra",
-        price: 1899,
-        originalPrice: 2999,
-        currency: "INR",
-        url: "https://www.myntra.com",
-        affiliateUrl: "https://www.myntra.com",
-        availability: true,
-        lastUpdated: "2026-08-30T18:00:00Z",
-      },
-      {
-        store: "Amazon",
-        price: 1999,
-        originalPrice: 2999,
-        currency: "INR",
-        url: "https://www.amazon.in",
-        affiliateUrl: "https://www.amazon.in?tag=pricelyindia-21",
-        availability: true,
-        lastUpdated: "2026-08-30T18:00:00Z",
-      },
-      {
-        store: "AJIO",
-        price: 2099,
-        originalPrice: 2999,
-        currency: "INR",
-        url: "https://www.ajio.com",
-        affiliateUrl: "https://www.ajio.com",
-        availability: true,
-        lastUpdated: "2026-08-30T18:00:00Z",
-      },
-      {
-        store: "Flipkart",
-        price: 2199,
-        originalPrice: 2999,
-        currency: "INR",
-        url: "https://www.flipkart.com",
-        affiliateUrl: "https://www.flipkart.com?affid=pricely",
-        availability: true,
-        lastUpdated: "2026-08-30T18:00:00Z",
-      },
-    ],
-    priceHistory: [
-      { month: "May 2026", price: 2499 },
-      { month: "June 2026", price: 2299 },
-      { month: "July 2026", price: 2199 },
-      { month: "August 2026", price: 1899 },
-    ],
-  }),
-
-  createProduct({
-    id: "501-jeans",
-    name: "501 Jeans",
-    brand: "Levi's",
-    category: "Men",
-    description: "Classic straight-fit denim jeans crafted from non-stretch heavyweight denim with iconic button fly.",
-    rating: 4.6,
-    reviews: 2100,
-    trustScore: 95,
-    image: "/images/products/levis-501.jpg",
-    images: ["/images/products/levis-501.jpg"],
-    offers: [
-      {
-        store: "AJIO",
-        price: 1499,
-        originalPrice: 2599,
-        currency: "INR",
-        url: "https://www.ajio.com",
-        affiliateUrl: "https://www.ajio.com",
-        availability: true,
-        lastUpdated: "2026-08-30T18:00:00Z",
-      },
-      {
-        store: "Amazon",
-        price: 1499,
-        originalPrice: 2599,
-        currency: "INR",
-        url: "https://www.amazon.in/Levis-Mens-Slim-Jeans-A7087-0093_Blue/dp/B0C6QW8T95",
-        affiliateUrl: "https://www.amazon.in/Levis-Mens-Slim-Jeans-A7087-0093_Blue/dp/B0C6QW8T95?tag=pricelyindia-21",
-        availability: true,
-        lastUpdated: "2026-08-30T18:00:00Z",
-      },
-      {
-        store: "Flipkart",
-        price: 1699,
-        originalPrice: 2599,
-        currency: "INR",
-        url: "https://www.flipkart.com",
-        affiliateUrl: "https://www.flipkart.com?affid=pricely",
-        availability: true,
-        lastUpdated: "2026-08-30T18:00:00Z",
-      },
-    ],
-    priceHistory: [
-      { month: "May 2026", price: 1899 },
-      { month: "June 2026", price: 1799 },
-      { month: "July 2026", price: 1599 },
-      { month: "August 2026", price: 1499 },
-    ],
-  }),
-
-  createProduct({
-    id: "vintage-watch",
-    name: "Vintage Watch",
-    brand: "Casio",
-    category: "Watches",
-    description: "Digital wristwatch with timeless retro stainless steel bracelet, LED backlight, and daily alarm.",
-    rating: 4.3,
-    reviews: 620,
-    trustScore: 87,
-    image: "/images/products/casio-watch.jpg",
-    images: ["/images/products/casio-watch.jpg"],
-    offers: [
-      {
-        store: "Flipkart",
-        price: 2999,
-        originalPrice: 3995,
-        currency: "INR",
-        url: "https://www.flipkart.com",
-        affiliateUrl: "https://www.flipkart.com?affid=pricely",
-        availability: true,
-        lastUpdated: "2026-08-30T18:00:00Z",
-      },
-      {
-        store: "Amazon",
-        price: 3199,
-        originalPrice: 3995,
-        currency: "INR",
-        url: "https://www.amazon.in",
-        affiliateUrl: "https://www.amazon.in?tag=pricelyindia-21",
-        availability: true,
-        lastUpdated: "2026-08-30T18:00:00Z",
-      },
-    ],
-    priceHistory: [
-      { month: "May 2026", price: 3499 },
-      { month: "June 2026", price: 3299 },
-      { month: "July 2026", price: 2999 },
-      { month: "August 2026", price: 2499 },
-    ],
-  }),
-];
+const databaseProvider = new DatabaseProductProvider();
 
 /**
  * LocalProductProvider
  *
  * Implements ProductProvider interface using the curated local product dataset.
- * Serves as both the default active provider and the architectural reference for
- * future live API providers.
+ * Follows strict layered resolution:
+ * 1. Existing 52 local products
+ * 2. Published admin products from database
+ * 3. Live qc-* cached products
  */
 export class LocalProductProvider implements ProductProvider {
   readonly providerId = "local-product-provider";
@@ -240,12 +35,40 @@ export class LocalProductProvider implements ProductProvider {
   }
 
   async getProducts(): Promise<Product[]> {
-    return this.products;
+    const dbProducts = await databaseProvider.getProducts();
+    if (dbProducts.length === 0) {
+      return this.products;
+    }
+    const map = new Map<string, Product>();
+    for (const p of this.products) {
+      map.set(p.id, p);
+    }
+    for (const p of dbProducts) {
+      if (!map.has(p.id)) {
+        map.set(p.id, p);
+      }
+    }
+    return Array.from(map.values());
   }
 
   async getProductById(id: string): Promise<Product | undefined> {
     if (!id) return undefined;
-    return this.products.find((p) => p.id === id);
+    // 1. Existing 52 local products
+    const localProduct = this.products.find((p) => p.id === id);
+    if (localProduct) {
+      return localProduct;
+    }
+    // 2. Published admin products from database
+    const dbProduct = await databaseProvider.getProductById(id);
+    if (dbProduct) {
+      return dbProduct;
+    }
+    // 3. Live qc-* cached products
+    const cachedLive = getCachedLiveProduct(id);
+    if (cachedLive) {
+      return cachedLive;
+    }
+    return undefined;
   }
 
   async getProductsByCategory(category: string): Promise<Product[]> {

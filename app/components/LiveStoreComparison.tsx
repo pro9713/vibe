@@ -202,6 +202,11 @@ export default function LiveStoreComparison({
             <span>Buy Now at {bestTrustedDeal.store}</span>
             <ExternalLink size={18} />
           </a>
+          {bestTrustedDeal.store.toLowerCase() === "amazon" && (
+            <p className="mt-2 text-center text-[11px] text-gray-500 font-normal">
+              (paid link) • As an Amazon Associate I earn from qualifying purchases.
+            </p>
+          )}
         </div>
       )}
 
@@ -262,6 +267,8 @@ export default function LiveStoreComparison({
 
             const offerUrl = item.affiliateUrl || item.url || "#";
 
+            const isAmazon = item.store.toLowerCase() === "amazon";
+
             return (
               <div
                 key={`${item.store}-${item.price}`}
@@ -274,6 +281,11 @@ export default function LiveStoreComparison({
                     <span className="text-base font-bold text-gray-900">
                       {item.store}
                     </span>
+                    {isAmazon && (
+                      <span className="text-[10px] text-gray-500 font-medium">
+                        (paid link)
+                      </span>
+                    )}
                     {isWinner && (
                       <span className="rounded-md bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700">
                         Best Deal
@@ -309,19 +321,26 @@ export default function LiveStoreComparison({
                     )}
                   </div>
 
-                  <a
-                    href={offerUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`flex items-center gap-1 rounded-xl px-4 py-2 text-xs font-bold transition ${
-                      isWinner
-                        ? "bg-green-600 text-white hover:bg-green-700"
-                        : "bg-gray-900 text-white hover:bg-blue-600"
-                    }`}
-                  >
-                    <span>Go to Store</span>
-                    <ExternalLink size={14} />
-                  </a>
+                  <div className="flex flex-col items-end gap-1">
+                    <a
+                      href={offerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`flex items-center gap-1 rounded-xl px-4 py-2 text-xs font-bold transition ${
+                        isWinner
+                          ? "bg-green-600 text-white hover:bg-green-700"
+                          : "bg-gray-900 text-white hover:bg-blue-600"
+                      }`}
+                    >
+                      <span>Go to Store</span>
+                      <ExternalLink size={14} />
+                    </a>
+                    {isAmazon && (
+                      <span className="text-[10px] text-gray-400 font-normal">
+                        (paid link)
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -351,6 +370,13 @@ export default function LiveStoreComparison({
             </div>
           )}
         </div>
+
+        {/* Affiliate Disclosure in comparison footer */}
+        {offers.some((o) => o.store.toLowerCase() === "amazon") && (
+          <p className="mt-4 border-t border-gray-100/60 pt-3 text-[11px] text-gray-500 text-center sm:text-left font-normal">
+            As an Amazon Associate I earn from qualifying purchases.
+          </p>
+        )}
       </div>
     </div>
   );

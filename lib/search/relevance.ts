@@ -1,6 +1,6 @@
-import type { Product } from "@/lib/data/types";
-import type { ParsedSearchQuery } from "@/lib/searchParser";
-import { CATEGORY_TAXONOMY, normalizeBrand } from "./aliases";
+import type { Product } from "../data/types.ts";
+import type { ParsedSearchQuery } from "../searchParser.ts";
+import { CATEGORY_TAXONOMY, normalizeBrand, normalizeCategory } from "./aliases.ts";
 
 export interface RelevanceScoreBreakdown {
   categoryMatch: number;
@@ -60,55 +60,50 @@ export function scoreProductRelevance(
   const effectiveMaxPrice = criteria?.maxPrice !== undefined ? criteria.maxPrice : parsed.maxPrice;
   const effectiveMinPrice = criteria?.minPrice !== undefined ? criteria.minPrice : parsed.minPrice;
 
-  const productName = product.name.toLowerCase();
-  const productBrand = product.brand.toLowerCase();
-  const productCategory = product.category.toLowerCase();
-  const productDescription = product.description.toLowerCase();
+  const productName = (product.name || "").toLowerCase();
+  const productBrand = (product.brand || "").toLowerCase();
+  const productCategory = (product.category || "").toLowerCase();
+  const productDescription = (product.description || "").toLowerCase();
   const searchableText = `${productName} ${productBrand} ${productCategory} ${productDescription}`;
 
   // -------------------------------------------------------------
   // 1. HARD CATEGORY FILTER & REJECTION
   // -------------------------------------------------------------
-  if (effectiveCategory && CATEGORY_TAXONOMY[effectiveCategory]) {
-    const taxonomy = CATEGORY_TAXONOMY[effectiveCategory];
+  if (effectiveCategory) {
+    const canonicalTargetCategory = normalizeCategory(effectiveCategory) || effectiveCategory;
+    const isCategoryExact = productCategory === canonicalTargetCategory.toLowerCase();
 
-    // Check if product contains explicit negative exclusion terms for this category
-    // (e.g. "wristband", "towel", "socks" when category is "Shoes")
-    const hasExclusion = taxonomy.exclusionKeywords.some((neg) => {
-      const regex = new RegExp(`\\b${neg}\\b`, "i");
-      return regex.test(productName) || regex.test(productDescription);
-    });
-
-    if (hasExclusion) {
+    if (!isCategoryExact) {
       return {
         product,
         isRelevant: false,
-        rejectionReason: `Contains incompatible keyword for category "${effectiveCategory}".`,
+        rejectionReason: `Product category "${product.category}" does not match requested category "${effectiveCategory}".`,
         relevanceScore: -999,
         breakdown,
       };
     }
 
-    // Check if product matches positive category aliases or category field
-    const matchesPositiveAlias = taxonomy.positiveAliases.some((alias) => {
-      const regex = new RegExp(`\\b${alias}\\b`, "i");
-      return regex.test(searchableText);
-    });
+    if (CATEGORY_TAXONOMY[canonicalTargetCategory]) {
+      const taxonomy = CATEGORY_TAXONOMY[canonicalTargetCategory];
 
-    const matchesCategoryField = productCategory === effectiveCategory.toLowerCase();
+      // Check if product contains explicit negative exclusion terms for this category
+      const hasExclusion = taxonomy.exclusionKeywords.some((neg) => {
+        const regex = new RegExp(`\\b${neg}\\b`, "i");
+        return regex.test(productName) || regex.test(productDescription);
+      });
 
-    if (matchesPositiveAlias || matchesCategoryField) {
-      breakdown.categoryMatch = 40;
-    } else {
-      // If user specifically requested Shoes, and product doesn't mention any shoe terms -> REJECT
-      return {
-        product,
-        isRelevant: false,
-        rejectionReason: `Does not match requested category "${effectiveCategory}".`,
-        relevanceScore: -999,
-        breakdown,
-      };
+      if (hasExclusion) {
+        return {
+          product,
+          isRelevant: false,
+          rejectionReason: `Contains incompatible keyword for category "${effectiveCategory}".`,
+          relevanceScore: -999,
+          breakdown,
+        };
+      }
     }
+
+    breakdown.categoryMatch = 40;
   }
 
   // -------------------------------------------------------------
@@ -219,13 +214,16 @@ export function scoreProductRelevance(
   }
 
   // Rating score (0 to +5)
-  breakdown.ratingScore = Math.min(5, Math.max(0, (product.rating / 5) * 5));
+  const productRating = typeof product.rating === "number" && !isNaN(product.rating) ? product.rating : 0;
+  breakdown.ratingScore = Math.min(5, Math.max(0, (productRating / 5) * 5));
 
   // Reviews score (0 to +5)
-  breakdown.reviewScore = Math.min(5, (product.reviews / 200) * 5);
+  const productReviews = typeof product.reviews === "number" && !isNaN(product.reviews) ? product.reviews : 0;
+  breakdown.reviewScore = Math.min(5, (productReviews / 200) * 5);
 
   // Store trust score (0 to +10)
-  breakdown.storeTrustScore = Math.min(10, Math.max(0, (product.trustScore / 100) * 10));
+  const productTrust = typeof product.trustScore === "number" && !isNaN(product.trustScore) ? product.trustScore : 0;
+  breakdown.storeTrustScore = Math.min(10, Math.max(0, (productTrust / 100) * 10));
 
   // Deal quality bonus
   const originalPrice = product.offers[0]?.originalPrice || 0;

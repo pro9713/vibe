@@ -1,9 +1,9 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { getTrackedTarget } from "./wishlist";
-import { products } from "@/data/products";
-import { getClientUser } from "./auth";
+import { getTrackedTarget } from "./wishlist.ts";
+import { products } from "../data/products.ts";
+import { getClientUser } from "./auth/index.ts";
 
 export const PRICE_ALERTS_STORAGE_KEY = "pricely-price-alerts";
 const MAX_ALERTS = 50;

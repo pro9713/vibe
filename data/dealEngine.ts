@@ -1,5 +1,5 @@
-import { trustedStores } from "./stores";
-import type { StoreOffer } from "./products";
+import { trustedStores } from "./stores.ts";
+import type { StoreOffer } from "./products.ts";
 
 export interface BestTrustedDeal extends StoreOffer {
   trustScore: number;

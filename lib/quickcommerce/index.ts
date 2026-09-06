@@ -1,3 +1,4 @@
-export * from "./types";
-export * from "./client";
-export * from "./normalizer";
+export * from "./types.ts";
+export * from "./client.ts";
+export * from "./normalizer.ts";
+export * from "./live-product-cache.ts";

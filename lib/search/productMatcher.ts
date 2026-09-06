@@ -1,5 +1,5 @@
-import type { Product } from "@/lib/data/types";
-import { normalizeBrand, CATEGORY_TAXONOMY } from "./aliases";
+import type { Product } from "../data/types.ts";
+import { normalizeBrand, CATEGORY_TAXONOMY } from "./aliases.ts";
 
 export interface MatchResult {
   isMatch: boolean;
@@ -237,8 +237,8 @@ export function calculateProductMatchConfidence(
 
   const tokenOverlapScore = matchedTokens / targetTokens.length;
 
-  // Model Code Check (e.g. "270", "501", "rs-x", "ultraboost")
-  const numericModelRegex = /\b(\d{3,4}|[a-z]{1,4}-\d{1,4})\b/i;
+  // Model Code Check (e.g. "40", "270", "501", "rs-x", "ultraboost")
+  const numericModelRegex = /\b(\d{2,4}|[a-z]{1,4}-\d{1,4})\b/i;
   const targetModelMatch = targetName.match(numericModelRegex);
   let modelCodeScore = 0.5;
 
@@ -247,7 +247,13 @@ export function calculateProductMatchConfidence(
     if (candidateName.includes(modelCode)) {
       modelCodeScore = 1.0;
     } else {
-      modelCodeScore = 0.0;
+      return {
+        isMatch: false,
+        confidence: 0,
+        reason: `Model identifier mismatch: target has "${modelCode}" but candidate does not.`,
+        matchTier: "LOW",
+        extractedAttributes: candidateAttrs,
+      };
     }
   }
 

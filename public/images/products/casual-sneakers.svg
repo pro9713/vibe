@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <linearGradient id="shoeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ea580c"/>
+      <stop offset="100%" stop-color="#c2410c"/>
+    </linearGradient>
+    <filter id="shoeShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+  <rect width="400" height="400" rx="32" fill="#fff7ed"/>
+  <g filter="url(#shoeShadow)" transform="translate(60, 110)">
+    <!-- Sole / midsole -->
+    <path d="M25,160 Q150,150 260,165 Q280,168 275,185 Q260,195 140,195 Q20,195 15,180 Q10,165 25,160 Z" fill="#ffffff" stroke="#e5e7eb" stroke-width="2"/>
+    <path d="M20,180 Q140,185 270,180 L268,190 Q140,195 20,190 Z" fill="#e5e7eb"/>
+    <!-- Shoe Upper Body -->
+    <path d="M35,160 Q30,135 60,115 Q100,90 120,70 Q145,55 160,85 Q175,100 215,120 Q255,130 265,160 Z" fill="url(#shoeGrad)"/>
+    <!-- Heel Collar padding -->
+    <path d="M55,120 Q80,105 105,100 L115,115 Q80,125 55,135 Z" fill="#fed7aa"/>
+    <!-- Swoop/Stripe accent -->
+    <path d="M70,150 Q130,130 220,140 Q150,165 80,158 Z" fill="#ffffff" opacity="0.9"/>
+    <!-- Eyelets & Laces -->
+    <circle cx="130" cy="100" r="3" fill="#ffffff"/>
+    <circle cx="145" cy="108" r="3" fill="#ffffff"/>
+    <circle cx="160" cy="116" r="3" fill="#ffffff"/>
+    <circle cx="175" cy="124" r="3" fill="#ffffff"/>
+    <path d="M125,95 L145,112 M140,103 L160,120 M155,111 L175,128" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
+  </g>
+</svg>

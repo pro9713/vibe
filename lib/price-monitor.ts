@@ -1,13 +1,13 @@
-import { products } from "@/data/products";
-import { compareProductOffers, type ComparisonResult } from "@/lib/quickcommerce/comparison";
-import { acquireJobLock, releaseJobLock } from "@/lib/monitoring/lock";
+import { products } from "../data/products.ts";
+import { compareProductOffers, type ComparisonResult } from "./quickcommerce/comparison.ts";
+import { acquireJobLock, releaseJobLock } from "./monitoring/lock.ts";
 import {
   recordExecutionLog,
   type ExecutionStatus,
-} from "@/lib/monitoring/logger";
-import { recordPriceSnapshot } from "@/lib/price-history";
-import { createCloudPriceAlert } from "@/lib/cloud/price-alerts";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+} from "./monitoring/logger.ts";
+import { recordPriceSnapshot } from "./price-history.ts";
+import { createCloudPriceAlert } from "./cloud/price-alerts.ts";
+import { createAdminSupabaseClient } from "./supabase/admin.ts";
 
 export interface MonitoredProductTarget {
   id?: string;

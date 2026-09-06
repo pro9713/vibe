@@ -7,7 +7,7 @@ import {
   type PriceHistoryItem,
   type RawProductInput,
   type ProductFilterOptions,
-} from "@/lib/data";
+} from "../lib/data/index.ts";
 
 export type {
   Product,

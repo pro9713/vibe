@@ -1,11 +1,15 @@
-import type { ProductProvider } from "../provider.interface";
-import type { Product, ProductFilterOptions, StoreOffer } from "../types";
-import { LocalProductProvider } from "./local-product.provider";
-import { type SupportedPlatform, validatePlatform } from "@/lib/quickcommerce/types";
-import { normalizeQuickCommerceProductList } from "@/lib/quickcommerce/normalizer";
-import { parseSearchQuery } from "@/lib/searchParser";
-import { rankProducts } from "@/lib/search/relevance";
-import { DEFAULT_SEARCH_LOCATION } from "@/lib/search/searchEngine";
+import type { ProductProvider } from "../provider.interface.ts";
+import type { Product, ProductFilterOptions, StoreOffer } from "../types.ts";
+import { LocalProductProvider } from "./local-product.provider.ts";
+import { type SupportedPlatform, validatePlatform } from "../../quickcommerce/types.ts";
+import { normalizeQuickCommerceProductList } from "../../quickcommerce/normalizer.ts";
+import { parseSearchQuery } from "../../searchParser.ts";
+import { rankProducts } from "../../search/relevance.ts";
+import { DEFAULT_SEARCH_LOCATION } from "../../search/searchEngine.ts";
+import {
+  getCachedLiveProduct,
+  setCachedLiveProduct,
+} from "../../quickcommerce/live-product-cache.ts";
 
 export interface QuickCommerceProviderConfig {
   defaultLocation?: {
@@ -80,6 +84,10 @@ export class QuickCommerceProductProvider implements ProductProvider {
   async getProductById(id: string): Promise<Product | undefined> {
     if (this.cachedProducts.has(id)) {
       return this.cachedProducts.get(id);
+    }
+    const cachedLive = getCachedLiveProduct(id);
+    if (cachedLive) {
+      return cachedLive;
     }
     return this.fallbackProvider.getProductById(id);
   }

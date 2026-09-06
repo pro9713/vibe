@@ -1,5 +1,5 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { type AuthUser } from "./index";
+import { createServerSupabaseClient } from "../supabase/server.ts";
+import { type AuthUser } from "./index.ts";
 
 function isSupabaseConfigured(): boolean {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <linearGradient id="handbagGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#b45309"/>
+      <stop offset="100%" stop-color="#78350f"/>
+    </linearGradient>
+    <filter id="hbShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+  <rect width="400" height="400" rx="32" fill="#fffbeb"/>
+  <g filter="url(#hbShadow)" transform="translate(85, 80)">
+    <!-- Dual handles -->
+    <path d="M70,70 C70,10 160,10 160,70" fill="none" stroke="#5a2307" stroke-width="8" stroke-linecap="round"/>
+    <path d="M85,70 C85,25 145,25 145,70" fill="none" stroke="#78350f" stroke-width="6" stroke-linecap="round"/>
+    <!-- Trapezoid tote body -->
+    <path d="M40,70 L190,70 L215,210 L15,210 Z" fill="url(#handbagGrad)"/>
+    <!-- Gold hardware buckles -->
+    <rect x="68" y="65" width="8" height="18" rx="2" fill="#f59e0b"/>
+    <rect x="154" y="65" width="8" height="18" rx="2" fill="#f59e0b"/>
+    <!-- Center seam & tag -->
+    <line x1="115" y1="70" x2="115" y2="210" stroke="#92400e" stroke-width="2"/>
+    <circle cx="115" cy="120" r="10" fill="#f59e0b"/>
+  </g>
+</svg>

@@ -1,5 +1,5 @@
-import type { StoreProvider } from "../provider.interface";
-import type { Store } from "../types";
+import type { StoreProvider } from "../provider.interface.ts";
+import type { Store } from "../types.ts";
 
 /**
  * Verified Retail Stores Dataset.

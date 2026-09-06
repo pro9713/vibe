@@ -1,4 +1,4 @@
-import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { createBrowserSupabaseClient } from "../supabase/client.ts";
 
 export interface AuthUser {
   id: string;

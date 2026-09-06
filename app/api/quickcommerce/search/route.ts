@@ -11,6 +11,14 @@ import {
   SUPPORTED_PLATFORMS,
 } from "@/lib/quickcommerce/types";
 
+import {
+  buildLiveSearchCacheKey,
+  getCachedLiveSearch,
+  setCachedLiveSearch,
+  getInFlightLiveSearch,
+  setInFlightLiveSearch,
+} from "@/lib/quickcommerce/live-product-cache";
+
 export const dynamic = "force-dynamic";
 
 /**
@@ -80,40 +88,80 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 4. Execute Server-side QuickCommerce Search
-    const client = getQuickCommerceClient();
-
-    const searchResult = await client.search({
-      q: q.trim(),
+    // 4. Check Server-side 15-Minute Live Cache (Credit Protection)
+    const cacheKey = buildLiveSearchCacheKey({
+      query: q.trim(),
       lat,
       lon,
-      platform: validatedPlatform,
       pincode: pincode?.trim(),
+      platform: validatedPlatform,
     });
 
-    // 5. Normalize into canonical Pricely Product model
-    const normalizedProducts = normalizeQuickCommerceProductList(
-      searchResult.products,
-      searchResult.platform
-    );
+    const cachedProducts = getCachedLiveSearch(cacheKey);
+    if (cachedProducts) {
+      return NextResponse.json(
+        {
+          success: true,
+          query: q.trim(),
+          platform: validatedPlatform,
+          location: { lat, lon, pincode: pincode || null },
+          count: cachedProducts.length,
+          products: cachedProducts,
+          cached: true,
+          meta: {
+            requestId: "cached",
+            creditsRemaining: null,
+          },
+        },
+        {
+          status: 200,
+          headers: {
+            "Cache-Control": "public, s-maxage=900, stale-while-revalidate=60",
+          },
+        }
+      );
+    }
+
+    // 5. In-flight request deduplication
+    let searchPromise = getInFlightLiveSearch(cacheKey);
+    if (!searchPromise) {
+      searchPromise = (async () => {
+        const client = getQuickCommerceClient();
+        const searchResult = await client.search({
+          q: q.trim(),
+          lat,
+          lon,
+          platform: validatedPlatform,
+          pincode: pincode?.trim(),
+        });
+
+        const normalized = normalizeQuickCommerceProductList(
+          searchResult.products,
+          searchResult.platform
+        );
+
+        setCachedLiveSearch(cacheKey, normalized, validatedPlatform, q.trim());
+        return normalized;
+      })();
+      setInFlightLiveSearch(cacheKey, searchPromise);
+    }
+
+    const normalizedProducts = await searchPromise;
 
     return NextResponse.json(
       {
         success: true,
         query: q.trim(),
-        platform: searchResult.platform,
+        platform: validatedPlatform,
         location: { lat, lon, pincode: pincode || null },
         count: normalizedProducts.length,
         products: normalizedProducts,
-        meta: {
-          requestId: searchResult.requestId,
-          creditsRemaining: searchResult.creditsRemaining,
-        },
+        cached: false,
       },
       {
         status: 200,
         headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=30",
+          "Cache-Control": "public, s-maxage=900, stale-while-revalidate=60",
         },
       }
     );

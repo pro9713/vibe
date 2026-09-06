@@ -2,10 +2,10 @@ import {
   createProduct,
   type Product,
   type StoreOffer,
-} from "@/lib/data/types";
-import { getStoreByName } from "@/data/stores";
-import type { QuickCommerceRawProduct, SupportedPlatform } from "./types";
-import { normalizeBrand } from "@/lib/search/aliases";
+} from "../data/types.ts";
+import { getStoreByName } from "../../data/stores.ts";
+import type { QuickCommerceRawProduct, SupportedPlatform } from "./types.ts";
+import { normalizeBrand } from "../search/aliases.ts";
 
 /**
  * Verified trust scores for supported QuickCommerce & Retailer platforms

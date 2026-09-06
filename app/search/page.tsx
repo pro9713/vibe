@@ -7,6 +7,7 @@ import ProductCard from "../components/ProductCard";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import VibeLoader from "../components/VibeLoader";
+import LiveSearchResultsBanner from "../components/LiveSearchResultsBanner";
 import { products } from "@/data/products";
 import { parseSearchQuery, type DetectedToken } from "@/lib/searchParser";
 import { rankProducts } from "@/lib/search/relevance";
@@ -24,13 +25,14 @@ function SearchPageContent() {
 
   const [searchQuery, setSearchQuery] = useState(queryParam);
   const [liveProducts, setLiveProducts] = useState<Product[]>([]);
+  const [isLiveSearching, setIsLiveSearching] = useState<boolean>(false);
+  const [hasSearchedLive, setHasSearchedLive] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<string>("default");
   const [categoryFilter, setCategoryFilter] = useState<string>(categoryParam || "all");
   const [brandFilter, setBrandFilter] = useState<string>(brandParam || "all");
   const [priceFilter, setPriceFilter] = useState<string>("all");
   const [storeFilter, setStoreFilter] = useState<string>("all");
   const [ignoredTokenTypes, setIgnoredTokenTypes] = useState<string[]>([]);
-  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Parse natural language search query
   const parsedSearch = useMemo(() => {
@@ -77,59 +79,45 @@ function SearchPageContent() {
     return parsedSearch.sortIntent || "default";
   }, [sortBy, parsedSearch.sortIntent, ignoredTokenTypes]);
 
-  // Live QuickCommerce search on explicit user search query & selected location
-  useEffect(() => {
+  // Explicit user-triggered live search (Credit safety: 0 calls on typing/browsing)
+  const handleTriggerLiveSearch = async () => {
     const trimmed = searchQuery.trim();
-    if (!trimmed) {
-      setLiveProducts([]);
-      return;
-    }
+    if (!trimmed && !effectiveBrand && !effectiveCategory) return;
 
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
+    setIsLiveSearching(true);
+    try {
+      const q = trimmed || [effectiveBrand !== "all" ? effectiveBrand : "", effectiveCategory !== "all" ? effectiveCategory : ""].filter(Boolean).join(" ");
+      const params = new URLSearchParams({
+        q,
+        lat: String(location.latitude ?? 19.0760),
+        lon: String(location.longitude ?? 72.8777),
+        platform: storeFilter !== "all" ? storeFilter : "BlinkIt",
+      });
 
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
+      if (location.pincode) {
+        params.set("pincode", location.pincode);
+      }
 
-    const timer = setTimeout(async () => {
-      try {
-        const params = new URLSearchParams({
-          q: trimmed,
-          lat: String(location.latitude ?? 19.0760),
-          lon: String(location.longitude ?? 72.8777),
-          platform: storeFilter !== "all" ? storeFilter : "BlinkIt",
-        });
-
-        if (location.pincode) {
-          params.set("pincode", location.pincode);
-        }
-
-        const res = await fetch(`/api/quickcommerce/search?${params.toString()}`, {
-          signal: controller.signal,
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data.products)) {
-            setLiveProducts(data.products);
-          }
-        }
-      } catch (err: unknown) {
-        if (err instanceof Error && err.name !== "AbortError") {
-          console.warn("[Search Live Fetch Error]:", err);
+      const res = await fetch(`/api/quickcommerce/search?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.products)) {
+          setLiveProducts(data.products);
+          setHasSearchedLive(true);
         }
       }
-    }, 250);
+    } catch (err: unknown) {
+      console.warn("[Search Live Fetch Error]:", err);
+    } finally {
+      setIsLiveSearching(false);
+    }
+  };
 
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [searchQuery, storeFilter, location.pincode, location.latitude, location.longitude]);
-
-  // Candidate pool combining live and local catalog
+  // Candidate pool combining live (when explicitly fetched) and local catalog
   const candidatePool = useMemo(() => {
+    if (!hasSearchedLive || liveProducts.length === 0) {
+      return products;
+    }
     const map = new Map<string, Product>();
     for (const p of liveProducts) {
       map.set(p.id, p);
@@ -140,7 +128,7 @@ function SearchPageContent() {
       }
     }
     return Array.from(map.values());
-  }, [liveProducts]);
+  }, [hasSearchedLive, liveProducts]);
 
   // Price dropdown filter mapping helper
   const parsedPriceRange = useMemo(() => {
@@ -192,6 +180,8 @@ function SearchPageContent() {
 
   const handleResetFilters = () => {
     setSearchQuery("");
+    setLiveProducts([]);
+    setHasSearchedLive(false);
     setSortBy("default");
     setCategoryFilter("all");
     setBrandFilter("all");
@@ -241,6 +231,8 @@ function SearchPageContent() {
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
                   setIgnoredTokenTypes([]);
+                  setHasSearchedLive(false);
+                  setLiveProducts([]);
                 }}
                 placeholder="Try 'nike shoes under 3000' or 'best watches'..."
                 className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
@@ -323,22 +315,31 @@ function SearchPageContent() {
                 >
                   <option value="all">All Brands</option>
                   <option value="Nike">Nike</option>
-                  <option value="Puma">Puma</option>
-                  <option value="Levi's">Levi&apos;s</option>
-                  <option value="Casio">Casio</option>
                   <option value="Adidas">Adidas</option>
+                  <option value="Puma">Puma</option>
+                  <option value="Levi's">Levi's</option>
                   <option value="Zara">Zara</option>
+                  <option value="H&M">H&M</option>
+                  <option value="Casio">Casio</option>
+                  <option value="Fossil">Fossil</option>
+                  <option value="Titan">Titan</option>
+                  <option value="Tommy Hilfiger">Tommy Hilfiger</option>
+                  <option value="Lavie">Lavie</option>
+                  <option value="Baggit">Baggit</option>
+                  <option value="L'Oreal Paris">L'Oreal Paris</option>
+                  <option value="Maybelline">Maybelline</option>
+                  <option value="Nykaa">Nykaa</option>
                 </select>
 
-                {/* Price Filter */}
+                {/* Price Range */}
                 <select
                   value={priceFilter}
                   onChange={(e) => setPriceFilter(e.target.value)}
                   className="rounded-xl border border-gray-200 bg-gray-50/50 px-3 py-2 text-xs font-semibold text-gray-700 outline-none hover:bg-gray-100"
                 >
-                  <option value="all">All Prices</option>
+                  <option value="all">Any Price</option>
                   <option value="under2000">Under ₹2,000</option>
-                  <option value="2000to3000">₹2,000 – ₹3,000</option>
+                  <option value="2000to3000">₹2,000 - ₹3,000</option>
                   <option value="above3000">Above ₹3,000</option>
                 </select>
 
@@ -351,33 +352,35 @@ function SearchPageContent() {
                   <option value="all">All Stores</option>
                   <option value="Amazon">Amazon</option>
                   <option value="Myntra">Myntra</option>
-                  <option value="AJIO">AJIO</option>
                   <option value="Flipkart">Flipkart</option>
+                  <option value="Nykaa">Nykaa</option>
+                  <option value="BlinkIt">BlinkIt</option>
+                  <option value="Zepto">Zepto</option>
+                  <option value="Instamart">Instamart</option>
                 </select>
               </div>
 
-              <div className="flex items-center gap-3">
-                {/* Sort Order */}
+              {/* Sort & Reset */}
+              <div className="flex items-center gap-2">
                 <select
                   value={effectiveSort}
                   onChange={(e) => {
                     setSortBy(e.target.value);
-                    setIgnoredTokenTypes((prev) => [...prev, "intent"]);
+                    if (e.target.value !== "default") {
+                      setIgnoredTokenTypes((prev) => [...prev, "intent"]);
+                    }
                   }}
-                  className="rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-semibold text-gray-800 shadow-sm outline-none"
+                  className="rounded-xl border border-gray-200 bg-gray-50/50 px-3 py-2 text-xs font-semibold text-gray-700 outline-none hover:bg-gray-100"
                 >
                   <option value="default">Sort: Recommended</option>
-                  <option value="best-value">🏆 Best Value Deal</option>
-                  <option value="low">Price: Low to High</option>
-                  <option value="price-low">Price: Low to High (NLP)</option>
-                  <option value="high">Price: High to Low</option>
-                  <option value="price-high">Price: High to Low (NLP)</option>
-                  <option value="rating">Highest Rated</option>
-                  <option value="brand">Brand: A–Z</option>
+                  <option value="price-asc">Price: Low to High</option>
+                  <option value="price-desc">Price: High to Low</option>
+                  <option value="rating-desc">Highest Rated</option>
                 </select>
 
                 {activeFiltersCount > 0 && (
                   <button
+                    type="button"
                     onClick={handleResetFilters}
                     className="flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-100"
                     title="Reset all filters"
@@ -390,10 +393,29 @@ function SearchPageContent() {
             </div>
           </div>
 
+          {/* Live Retailer Banner CTA */}
+          {(searchQuery.trim().length > 0 || hasSearchedLive || filteredProducts.length <= 6) && (
+            <div className="mt-6">
+              <LiveSearchResultsBanner
+                searchQuery={searchQuery}
+                localCount={products.length}
+                liveCount={liveProducts.length}
+                isLoading={isLiveSearching}
+                hasSearchedLive={hasSearchedLive}
+                onSearchLive={handleTriggerLiveSearch}
+              />
+            </div>
+          )}
+
           {/* Results Summary & Location Status Bar */}
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 px-1">
             <p className="text-xs font-semibold text-gray-500">
               Showing <strong className="text-gray-900">{filteredProducts.length}</strong> {filteredProducts.length === 1 ? "product" : "products"}
+              {hasSearchedLive && (
+                <span className="ml-2 inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700">
+                  Including Live Retailers
+                </span>
+              )}
             </p>
 
             <div className="flex items-center gap-1.5 rounded-xl border border-gray-200/80 bg-white px-3 py-1.5 text-xs text-gray-600 shadow-sm">
@@ -420,13 +442,13 @@ function SearchPageContent() {
                 <Search size={28} />
               </div>
               <h2 className="mt-4 text-2xl font-bold text-gray-900">
-                No matching products found
+                No matching catalog products found
               </h2>
               <p className="mt-2 max-w-md text-sm text-gray-500">
                 No {effectiveBrand !== "all" ? `${effectiveBrand} ` : ""}
                 {effectiveCategory !== "all" ? `${effectiveCategory} ` : "products "}
                 {effectiveMaxPrice ? `under ₹${effectiveMaxPrice.toLocaleString("en-IN")} ` : ""}
-                were found with the active filters.
+                were found in the local catalog.
               </p>
 
               {/* Actionable suggestions */}
@@ -477,6 +499,8 @@ function SearchPageContent() {
                       setPriceFilter("all");
                       setStoreFilter("all");
                       setIgnoredTokenTypes([]);
+                      setHasSearchedLive(false);
+                      setLiveProducts([]);
                     }}
                     className="rounded-xl bg-gray-100 px-3.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-600"
                   >
@@ -485,12 +509,22 @@ function SearchPageContent() {
                 ))}
               </div>
 
-              <button
-                onClick={handleResetFilters}
-                className="mt-6 rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700"
-              >
-                Clear All Filters
-              </button>
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleTriggerLiveSearch}
+                  disabled={isLiveSearching}
+                  className="rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700 active:scale-95 transition"
+                >
+                  {isLiveSearching ? "Searching Live Retailers..." : "Search Live Retailers Now"}
+                </button>
+                <button
+                  onClick={handleResetFilters}
+                  className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
+                >
+                  Clear All Filters
+                </button>
+              </div>
             </div>
           ) : (
             <div className="mt-8 grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
