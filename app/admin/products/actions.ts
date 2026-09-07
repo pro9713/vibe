@@ -21,10 +21,13 @@ import {
   type UpdateProductPayload,
   validateProductPayload,
 } from "../../../lib/admin/types.ts";
-import type { RetailerBadgeTier } from "../../../types/catalog.ts";
-import { createProduct, type Product } from "../../../lib/data/types.ts";
+import { createProduct } from "../../../lib/data/types.ts";
+import {
+  fetchRemoteProductMetadata,
+  type ExtractedProductMetadata,
+} from "../../../lib/admin/metadata-fetcher.ts";
 
-export type { CreateProductPayload, UpdateProductPayload };
+export type { CreateProductPayload, UpdateProductPayload, ExtractedProductMetadata };
 
 export interface ProductActionResult {
   success: boolean;
@@ -113,6 +116,19 @@ async function triggerImmediateRevalidation(productId?: string) {
   } catch {
     // Non-Next runtime
   }
+}
+
+/**
+ * Server Action to auto-fetch product metadata from a retailer URL.
+ * Uses parseProductUrl to determine store & canonical URL, then fetches OpenGraph/Microdata.
+ * Returns extracted fields gracefully (empty strings/fallbacks if blocked).
+ */
+export async function fetchProductMetadataAction(
+  url: string,
+  userOverride?: any
+): Promise<ExtractedProductMetadata> {
+  await assertAdminSession(userOverride);
+  return fetchRemoteProductMetadata(url);
 }
 
 /**

@@ -411,5 +411,6 @@ export function parseRetailerUrl(rawUrl: string): ParsedRetailerUrl {
   }
 }
 
-// Backwards compatibility alias
+// Backwards compatibility aliases
 export const parseRetailerProductUrl = parseRetailerUrl;
+export const parseProductUrl = parseRetailerUrl;

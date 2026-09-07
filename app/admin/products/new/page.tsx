@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { parseRetailerUrl } from "@/lib/admin/url-parser";
-import { createAdminProductAction } from "../actions";
+import { createAdminProductAction, fetchProductMetadataAction } from "../actions";
 import type { AdminProductStatus } from "@/lib/admin/types";
 import type { RetailerBadgeTier } from "@/types/catalog";
 import {
@@ -21,6 +21,8 @@ import {
   ExternalLink,
   Layers,
   FileCheck,
+  RefreshCw,
+  Info,
 } from "lucide-react";
 
 export default function AddProductPage() {
@@ -28,6 +30,8 @@ export default function AddProductPage() {
 
   // URL Ingestion State
   const [productUrl, setProductUrl] = useState("");
+  const [isFetching, setIsFetching] = useState(false);
+  const [fetchStatusMessage, setFetchStatusMessage] = useState<string | null>(null);
   const [urlFeedback, setUrlFeedback] = useState<{
     domain: string;
     retailerName: string;
@@ -64,6 +68,7 @@ export default function AddProductPage() {
   const handleUrlChange = (value: string) => {
     setProductUrl(value);
     setErrorMessage(null);
+    setFetchStatusMessage(null);
 
     if (value.trim()) {
       const parsed = parseRetailerUrl(value);
@@ -114,6 +119,71 @@ export default function AddProductPage() {
     }
     if (parsed.productId && !sku) {
       setSku(parsed.productId);
+    }
+  };
+
+  // Hybrid Auto-Fetch Metadata Workflow
+  const handleAutoFetch = async () => {
+    if (!productUrl.trim()) {
+      setErrorMessage("Please paste a product URL first to auto-fetch details.");
+      return;
+    }
+
+    setErrorMessage(null);
+    setFetchStatusMessage(null);
+    setIsFetching(true);
+
+    try {
+      const meta = await fetchProductMetadataAction(productUrl.trim());
+
+      // Update URL Feedback & store identification
+      setUrlFeedback({
+        domain: meta.domain || "retailer",
+        retailerName: meta.store || "Retailer",
+        cleanUrl: meta.cleanUrl || productUrl.trim(),
+        productId: meta.sku,
+        isSupported: meta.success,
+      });
+
+      if (meta.store && meta.store !== "Unknown") {
+        setStore(meta.store);
+      }
+      if (meta.sku) {
+        setSku(meta.sku);
+      }
+      if (meta.title) {
+        setName(meta.title);
+      }
+      if (meta.brand) {
+        setBrand(meta.brand);
+      }
+      if (meta.image) {
+        setImageUrl(meta.image);
+      }
+      if (meta.description) {
+        setDescription(meta.description);
+      }
+      if (meta.price && meta.price > 0) {
+        setPrice(meta.price.toString());
+      }
+      if (meta.originalPrice && meta.originalPrice > 0) {
+        setOriginalPrice(meta.originalPrice.toString());
+      }
+
+      if (meta.isFetched) {
+        setFetchStatusMessage(
+          `Successfully auto-populated product details from ${meta.store}! All fields remain editable for manual review.`
+        );
+      } else {
+        setFetchStatusMessage(
+          meta.message ||
+            `Store URL verified. Anti-bot or minimal tags prevented full auto-fill; please fill or verify details manually.`
+        );
+      }
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Failed to fetch metadata from product URL.");
+    } finally {
+      setIsFetching(false);
     }
   };
 
@@ -232,7 +302,7 @@ export default function AddProductPage() {
       )}
 
       <form onSubmit={(e) => e.preventDefault()} className="space-y-8">
-        {/* Step 1: URL Ingestion & Retailer Detection */}
+        {/* Step 1: URL Ingestion & Retailer Auto-Fetch */}
         <div className="rounded-3xl border border-indigo-100 bg-gradient-to-b from-indigo-50/40 to-white p-6 md:p-8 shadow-xs space-y-5">
           <div className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white shadow-xs">
@@ -240,10 +310,10 @@ export default function AddProductPage() {
             </div>
             <div>
               <h2 className="text-base font-bold text-gray-950">
-                1. Retailer Link Ingestion & URL Sanitization
+                1. Retailer Link Ingestion & Auto-Fetch
               </h2>
               <p className="text-xs text-gray-500">
-                Paste a product URL from Amazon India, Myntra, Nykaa, AJIO, Tata CLiQ Luxury, or Nike India.
+                Paste a product URL from Amazon India, Myntra, Nykaa, AJIO, Tata CLiQ, Nike, or any store to auto-fill details.
               </p>
             </div>
           </div>
@@ -252,28 +322,59 @@ export default function AddProductPage() {
             <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
               Product URL <span className="text-red-500">*</span>
             </label>
-            <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex flex-col sm:flex-row gap-2.5">
               <input
                 type="url"
                 value={productUrl}
                 onChange={(e) => handleUrlChange(e.target.value)}
                 placeholder="https://www.amazon.in/dp/B0CHX1W1XY or https://www.myntra.com/..."
-                className="flex-1 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-xs md:text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-hidden focus:ring-2 focus:ring-blue-100"
+                className="flex-1 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-xs md:text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-hidden focus:ring-2 focus:ring-blue-100 shadow-2xs"
               />
+
+              <button
+                type="button"
+                onClick={handleAutoFetch}
+                disabled={isFetching || !productUrl.trim()}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-6 py-3 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+              >
+                {isFetching ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin" />
+                    <span>Fetching Details...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={15} className="text-amber-300" />
+                    <span>Fetch Details from URL</span>
+                  </>
+                )}
+              </button>
+
               <button
                 type="button"
                 onClick={handleManualDetect}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gray-900 px-5 py-3 text-xs font-bold text-white hover:bg-gray-800 transition"
+                disabled={isFetching || !productUrl.trim()}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-xs font-bold text-gray-700 hover:bg-gray-50 transition active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+                title="Sanitize URL without remote fetching"
               >
-                <Sparkles size={14} />
-                <span>Detect Retailer</span>
+                <span>Detect Store Only</span>
               </button>
             </div>
           </div>
 
+          {/* Fetch Status Message */}
+          {fetchStatusMessage && (
+            <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-3.5 text-xs text-blue-900 font-medium flex items-start gap-2.5 shadow-2xs animate-in fade-in duration-200">
+              <Info size={16} className="text-blue-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <span>{fetchStatusMessage}</span>
+              </div>
+            </div>
+          )}
+
           {/* URL Detection Feedback */}
           {urlFeedback && (
-            <div className="rounded-2xl border border-blue-200 bg-blue-50/60 p-4 text-xs space-y-2">
+            <div className="rounded-2xl border border-gray-200 bg-gray-50/80 p-4 text-xs space-y-2.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-gray-900">Detected Retailer:</span>
@@ -284,7 +385,7 @@ export default function AddProductPage() {
                 </div>
 
                 {urlFeedback.productId && (
-                  <span className="rounded-full bg-white px-2.5 py-0.5 font-bold text-gray-700 border border-blue-200">
+                  <span className="rounded-full bg-white px-2.5 py-0.5 font-bold text-gray-700 border border-gray-200">
                     SKU / ASIN: {urlFeedback.productId}
                   </span>
                 )}
