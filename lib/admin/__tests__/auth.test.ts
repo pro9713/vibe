@@ -77,3 +77,16 @@ test("4. Admin Auth - assertAdminSession returns valid AdminSession for admin / 
   assert.equal(session.user.id, "user-super-2");
   assert.equal(session.user.email, "admin@pricely.in");
 });
+
+test("5. Admin Auth - assertAdminSession in development returns mock super_admin when no session", async () => {
+  const originalEnv = process.env.NODE_ENV;
+  try {
+    (process.env as any).NODE_ENV = "development";
+    const devSession = await assertAdminSession();
+    assert.ok(devSession);
+    assert.equal(devSession.role, "super_admin");
+    assert.equal(devSession.email, "admin@pricely.in");
+  } finally {
+    (process.env as any).NODE_ENV = originalEnv;
+  }
+});

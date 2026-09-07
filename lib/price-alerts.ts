@@ -278,11 +278,14 @@ function subscribePriceAlerts(callback: () => void) {
   };
 }
 
+const EMPTY_ALERTS: PriceAlert[] = [];
+const getEmptyAlerts = () => EMPTY_ALERTS;
+
 let cachedAlertsRaw: string | null = null;
-let cachedAlertsSnapshot: PriceAlert[] = [];
+let cachedAlertsSnapshot: PriceAlert[] = EMPTY_ALERTS;
 
 function getAlertsSnapshot(): PriceAlert[] {
-  if (typeof window === "undefined") return [];
+  if (typeof window === "undefined") return EMPTY_ALERTS;
   const raw = window.localStorage.getItem(PRICE_ALERTS_STORAGE_KEY);
   if (raw !== cachedAlertsRaw) {
     cachedAlertsRaw = raw;
@@ -295,7 +298,7 @@ export function usePriceAlerts(): PriceAlert[] {
   return useSyncExternalStore(
     subscribePriceAlerts,
     getAlertsSnapshot,
-    () => []
+    getEmptyAlerts
   );
 }
 
