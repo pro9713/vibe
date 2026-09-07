@@ -18,6 +18,11 @@ import {
   getInFlightLiveSearch,
   setInFlightLiveSearch,
 } from "@/lib/quickcommerce/live-product-cache";
+import {
+  checkRateLimit,
+  getClientIp,
+  getRateLimitHeaders,
+} from "@/lib/security/rate-limiter";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +38,24 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(request: NextRequest) {
   try {
+    // 0. Enforce Client IP Rate Limiting (10 requests / minute)
+    const clientIp = getClientIp(request);
+    const rateLimit = checkRateLimit(clientIp, 10, 60 * 1000);
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: "Rate Limit Exceeded",
+          message: "Too many live search requests. Please wait a moment before trying again.",
+          retryAfter: rateLimit.retryAfter,
+        },
+        {
+          status: 429,
+          headers: getRateLimitHeaders(rateLimit),
+        }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
 
     const q = searchParams.get("q");

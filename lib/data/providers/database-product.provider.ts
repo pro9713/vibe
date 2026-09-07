@@ -27,6 +27,12 @@ export function clearInMemoryAdminProducts(): void {
   invalidateDatabaseProductCache();
 }
 
+export function getInMemoryAdminProductEntry(
+  id: string
+): { product: Product; status: string } | undefined {
+  return inMemoryAdminProducts.get(id);
+}
+
 /**
  * DatabaseProductProvider
  *

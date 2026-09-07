@@ -1,8 +1,8 @@
 "use server";
 
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { assertAdminSession } from "@/lib/auth/admin";
-import { parseRetailerProductUrl } from "@/lib/admin/urlParser";
+import { assertAdminSession } from "@/lib/admin/auth";
+import { parseRetailerUrl, parseRetailerProductUrl } from "@/lib/admin/url-parser";
 import type {
   AdminProduct,
   AdminRetailer,
@@ -37,13 +37,16 @@ export async function getAdminDashboardStatsAction(): Promise<{
   hiddenCount: number;
   archivedCount: number;
   totalRetailers: number;
+  totalOffers: number;
   recentProducts: AdminProduct[];
+  draftProducts: AdminProduct[];
 }> {
   await assertAdminSession();
   const supabase = createAdminSupabaseClient();
 
   if (!supabase) {
     const prods = Array.from(memoryProducts.values());
+    const totalOffers = prods.reduce((sum, p) => sum + (p.offers?.length || 0), 0);
     return {
       totalProducts: prods.length,
       publishedCount: prods.filter((p) => p.status === "published").length,
@@ -51,7 +54,9 @@ export async function getAdminDashboardStatsAction(): Promise<{
       hiddenCount: prods.filter((p) => p.status === "hidden").length,
       archivedCount: prods.filter((p) => p.status === "archived").length,
       totalRetailers: memoryRetailers.size,
-      recentProducts: prods.slice(0, 5),
+      totalOffers,
+      recentProducts: prods.slice(0, 6),
+      draftProducts: prods.filter((p) => p.status === "draft").slice(0, 6),
     };
   }
 
@@ -114,6 +119,8 @@ export async function getAdminDashboardStatsAction(): Promise<{
       })),
     }));
 
+    const totalOffers = items.reduce((sum, p) => sum + (p.offers?.length || 0), 0);
+
     return {
       totalProducts: items.length,
       publishedCount: items.filter((p) => p.status === "published").length,
@@ -121,7 +128,9 @@ export async function getAdminDashboardStatsAction(): Promise<{
       hiddenCount: items.filter((p) => p.status === "hidden").length,
       archivedCount: items.filter((p) => p.status === "archived").length,
       totalRetailers: retailerCount || 0,
-      recentProducts: items.slice(0, 5),
+      totalOffers,
+      recentProducts: items.slice(0, 6),
+      draftProducts: items.filter((p) => p.status === "draft").slice(0, 6),
     };
   } catch (err) {
     console.warn("[AdminDashboardStats] Error:", err);
@@ -132,7 +141,9 @@ export async function getAdminDashboardStatsAction(): Promise<{
       hiddenCount: 0,
       archivedCount: 0,
       totalRetailers: 0,
+      totalOffers: 0,
       recentProducts: [],
+      draftProducts: [],
     };
   }
 }

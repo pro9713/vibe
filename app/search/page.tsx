@@ -113,22 +113,57 @@ function SearchPageContent() {
     }
   };
 
-  // Candidate pool combining live (when explicitly fetched) and local catalog
+  const [catalogProducts, setCatalogProducts] = useState<Product[]>(products);
+
+  // Hydrate client catalog with published DB products
+  useEffect(() => {
+    fetch("/api/catalog")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && Array.isArray(data.products) && data.products.length > 0) {
+          const adapted: Product[] = data.products.map((u: any) => ({
+            id: u.id,
+            name: u.name,
+            brand: u.brand,
+            category: u.category,
+            description: u.description || "",
+            image: u.image,
+            images: u.images,
+            rating: u.rating,
+            reviews: u.reviews,
+            trustScore: u.trustScore,
+            offers: u.offers,
+            priceHistory: u.priceHistory || [],
+            bestDeal: {
+              store: u.bestDeal.store,
+              price: u.bestDeal.price,
+            },
+            prices: u.offers,
+            history: u.priceHistory || [],
+          }));
+          setCatalogProducts(adapted);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Candidate pool combining live (when explicitly fetched) and public catalog
   const candidatePool = useMemo(() => {
+    const base = catalogProducts.length > 0 ? catalogProducts : products;
     if (!hasSearchedLive || liveProducts.length === 0) {
-      return products;
+      return base;
     }
     const map = new Map<string, Product>();
     for (const p of liveProducts) {
       map.set(p.id, p);
     }
-    for (const p of products) {
+    for (const p of base) {
       if (!map.has(p.id)) {
         map.set(p.id, p);
       }
     }
     return Array.from(map.values());
-  }, [hasSearchedLive, liveProducts]);
+  }, [hasSearchedLive, liveProducts, catalogProducts]);
 
   // Price dropdown filter mapping helper
   const parsedPriceRange = useMemo(() => {

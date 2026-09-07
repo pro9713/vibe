@@ -1,13 +1,11 @@
+import { getPublicCatalog } from "../catalog/resolver.ts";
 import { products as localProducts } from "../../data/products.ts";
 import type { Product } from "../data/types.ts";
-import { DatabaseProductProvider } from "../data/providers/database-product.provider.ts";
 import { parseSearchQuery, type ParsedSearchQuery } from "../searchParser.ts";
 import { rankProducts, type FilterCriteria } from "./relevance.ts";
 
 export * from "./aliases.ts";
 export * from "./relevance.ts";
-
-const databaseProvider = new DatabaseProductProvider();
 
 export interface SearchOptions extends FilterCriteria {
   enableLiveQuickCommerce?: boolean;
@@ -31,9 +29,9 @@ export const DEFAULT_SEARCH_LOCATION: { lat: number; lon: number; pincode?: stri
  * live QuickCommerce retrieval, hard category/brand filtering, and deterministic ranking.
  *
  * Modes:
- * - "local" (default): Instant, offline search strictly using verified 52-product local catalog (0 API calls).
+ * - "local" (default): Instant, offline search strictly using verified public catalog (0 API calls).
  * - "live": Searches live retailers only (QuickCommerce API with 15-min cache).
- * - "hybrid": Merges live retailer results with the verified local catalog.
+ * - "hybrid": Merges live retailer results with the verified public catalog.
  */
 export async function executeSmartSearch(
   query: string,
@@ -48,21 +46,50 @@ export async function executeSmartSearch(
   const searchMode: "local" | "live" | "hybrid" =
     options?.mode || (options?.enableLiveQuickCommerce ? "hybrid" : "local");
 
-  // Layered resolution: 1. local 52 products -> 2. published admin products
-  let candidatePool: Product[] = [...localProducts];
+  // Hydrate candidate pool using the unified public catalog (Local 52 + Published DB items)
+  let candidatePool: Product[] = [];
   try {
-    const dbProducts = await databaseProvider.getProducts();
-    if (dbProducts && dbProducts.length > 0) {
-      const seenIds = new Set(localProducts.map((p) => p.id));
-      for (const p of dbProducts) {
-        if (!seenIds.has(p.id)) {
-          seenIds.add(p.id);
-          candidatePool.push(p);
-        }
-      }
-    }
-  } catch (err) {
-    // Keep localProducts
+    const unifiedCatalog = await getPublicCatalog();
+    candidatePool = unifiedCatalog.map((u) => ({
+      id: u.id,
+      name: u.name,
+      brand: u.brand,
+      category: u.category,
+      description: u.description || "",
+      image: u.image,
+      images: u.images,
+      rating: u.rating,
+      reviews: u.reviews,
+      trustScore: u.trustScore,
+      offers: u.offers.map((o) => ({
+        store: o.store,
+        price: o.price,
+        originalPrice: o.originalPrice,
+        currency: o.currency || "INR",
+        url: o.url,
+        affiliateUrl: o.affiliateUrl,
+        availability: o.availability,
+        lastUpdated: o.lastUpdated,
+      })),
+      priceHistory: u.priceHistory || [],
+      bestDeal: {
+        store: u.bestDeal.store,
+        price: u.bestDeal.price,
+      },
+      prices: u.offers.map((o) => ({
+        store: o.store,
+        price: o.price,
+        originalPrice: o.originalPrice,
+        currency: o.currency || "INR",
+        url: o.url,
+        affiliateUrl: o.affiliateUrl,
+        availability: o.availability,
+        lastUpdated: o.lastUpdated,
+      })),
+      history: u.priceHistory || [],
+    }));
+  } catch {
+    candidatePool = [...localProducts];
   }
 
   let source: "local" | "quickcommerce" | "hybrid" = "local";

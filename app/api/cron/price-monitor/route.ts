@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runPriceMonitoringJob } from "@/lib/price-monitor";
+import { validateCronAuthorization } from "@/lib/security/rate-limiter";
 
 export const dynamic = "force-dynamic";
 
@@ -7,25 +8,8 @@ export const dynamic = "force-dynamic";
  * Validates the Authorization header against configured server-side cron secrets.
  */
 function isAuthorized(request: NextRequest): boolean {
-  const cronSecret = process.env.PRICELY_CRON_SECRET || process.env.CRON_SECRET;
-
-  // In production / deployed environments, a secret MUST be configured
-  if (!cronSecret || cronSecret.trim().length === 0) {
-    // If running in development and no secret is set, allow local dev testing with a warning
-    if (process.env.NODE_ENV === "development") {
-      const authHeader = request.headers.get("authorization");
-      return authHeader === "Bearer dev_secret" || authHeader === "Bearer local_test";
-    }
-    return false;
-  }
-
   const authHeader = request.headers.get("authorization");
-  if (!authHeader) {
-    return false;
-  }
-
-  const expectedHeader = `Bearer ${cronSecret.trim()}`;
-  return authHeader.trim() === expectedHeader;
+  return validateCronAuthorization(authHeader);
 }
 
 /**

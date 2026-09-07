@@ -1,8 +1,10 @@
 import ProductCard from "./ProductCard";
-import { products } from "@/data/products";
+import { getPublicCatalog } from "@/lib/catalog/resolver";
 import { Flame } from "lucide-react";
 
-export default function TrendingDeals() {
+export default async function TrendingDeals() {
+  const products = await getPublicCatalog();
+
   return (
     <section className="py-20 md:py-28 bg-[#F8F9FA]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

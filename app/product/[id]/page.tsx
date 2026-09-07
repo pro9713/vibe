@@ -2,9 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ShieldCheck, Star, CheckCircle2 } from "lucide-react";
-import { getProductById } from "@/lib/data";
-import { getCachedLiveProduct } from "@/lib/quickcommerce/live-product-cache";
+import { getPublicProductById } from "@/lib/catalog/resolver";
 import { tagProductAmazonOffers } from "@/lib/affiliate/amazon";
+import type { Product } from "@/lib/data/types";
 import PriceHistoryV2 from "@/app/components/PriceHistoryV2";
 import RecentlyViewedTracker from "@/app/components/RecentlyViewedTracker";
 import Navbar from "@/app/components/Navbar";
@@ -20,23 +20,59 @@ type PageProps = {
 export default async function ProductPage({ params }: PageProps) {
   const { id } = await params;
 
-  const rawProduct = (await getProductById(id)) || getCachedLiveProduct(id);
+  // Resolve product across 3 tiers (Local 52 -> Published DB -> Live QC Cache)
+  const unifiedProduct = await getPublicProductById(id);
 
-  if (!rawProduct) {
+  if (!unifiedProduct) {
     notFound();
   }
 
-  const product = tagProductAmazonOffers(rawProduct);
+  // Convert to standard Product model for existing components
+  const baseProduct: Product = {
+    id: unifiedProduct.id,
+    name: unifiedProduct.name,
+    brand: unifiedProduct.brand,
+    category: unifiedProduct.category,
+    description: unifiedProduct.description,
+    image: unifiedProduct.image,
+    images: unifiedProduct.images,
+    rating: unifiedProduct.rating,
+    reviews: unifiedProduct.reviews,
+    trustScore: unifiedProduct.trustScore,
+    offers: unifiedProduct.offers.map((o) => ({
+      store: o.store,
+      price: o.price,
+      originalPrice: o.originalPrice,
+      currency: o.currency || "INR",
+      url: o.url,
+      affiliateUrl: o.affiliateUrl,
+      availability: o.availability,
+      lastUpdated: o.lastUpdated,
+    })),
+    priceHistory: unifiedProduct.priceHistory || [],
+    bestDeal: {
+      store: unifiedProduct.bestDeal.store,
+      price: unifiedProduct.bestDeal.price,
+    },
+    prices: unifiedProduct.offers.map((o) => ({
+      store: o.store,
+      price: o.price,
+      originalPrice: o.originalPrice,
+      currency: o.currency || "INR",
+      url: o.url,
+      affiliateUrl: o.affiliateUrl,
+      availability: o.availability,
+      lastUpdated: o.lastUpdated,
+    })),
+    history: unifiedProduct.priceHistory || [],
+  };
+
+  const product = tagProductAmazonOffers(baseProduct);
 
   const prices = product.offers;
   const bestPrice = prices.length > 0 ? Math.min(...prices.map((p) => p.price)) : 0;
   const highestPrice = prices.length > 0 ? Math.max(...prices.map((p) => p.price)) : bestPrice;
   const savings = highestPrice - bestPrice;
-
-  const lowestHistoryPrice =
-    product.priceHistory && product.priceHistory.length > 0
-      ? Math.min(...product.priceHistory.map((item) => item.price))
-      : bestPrice;
 
   return (
     <div className="min-h-screen bg-gray-50/50 flex flex-col">
@@ -113,10 +149,12 @@ export default async function ProductPage({ params }: PageProps) {
                   </span>
                   <div className="flex items-center gap-1 text-sm font-bold text-gray-700">
                     <Star size={16} className="fill-amber-400 text-amber-400" />
-                    <span>{product.rating}</span>
-                    <span className="text-gray-400 font-normal">
-                      ({product.reviews.toLocaleString()} verified reviews)
-                    </span>
+                    <span>{product.rating > 0 ? product.rating : "New"}</span>
+                    {product.reviews > 0 && (
+                      <span className="text-gray-400 font-normal">
+                        ({product.reviews.toLocaleString()} verified reviews)
+                      </span>
+                    )}
                   </div>
                 </div>
 
