@@ -137,7 +137,7 @@ export default function AdminRetailersPage() {
   const handleOpenEditModal = (r: AdminRetailer) => {
     setEditingId(r.id);
     setName(r.name);
-    setWebsite(r.website);
+    setWebsite(r.website_url || r.website || "");
     setLogo(r.logo || "");
     setTrustScore(r.trustScore || 85);
     const tier = r.badgeTier || "trusted_retailer";
@@ -418,13 +418,13 @@ export default function AdminRetailersPage() {
                       <div>
                         <h3 className="text-sm font-bold text-gray-900">{r.name}</h3>
                         <a
-                          href={r.website}
+                          href={r.website_url || r.website || "#"}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-blue-600 transition"
                         >
                           <span className="truncate max-w-[160px]">
-                            {r.website.replace(/^https?:\/\//, "")}
+                            {(r.website_url || r.website || "").replace(/^https?:\/\//, "")}
                           </span>
                           <ExternalLink size={10} />
                         </a>

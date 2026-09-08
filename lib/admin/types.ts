@@ -16,6 +16,7 @@ export interface AdminRetailer {
   id: string;
   name: string;
   website: string;
+  website_url?: string;
   logo?: string;
   trusted: boolean;
   trustScore: number;

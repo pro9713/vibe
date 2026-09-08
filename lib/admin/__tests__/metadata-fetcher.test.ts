@@ -3,8 +3,9 @@ import assert from "node:assert/strict";
 import {
   cleanProductTitle,
   parseHtmlMetadata,
+  fetchProductMetadata,
   fetchRemoteProductMetadata,
-} from "../metadata-fetcher.ts";
+} from "../fetch-metadata.ts";
 import { parseRetailerUrl } from "../url-parser.ts";
 import { fetchProductMetadataAction } from "../../../app/admin/products/actions.ts";
 
@@ -27,7 +28,7 @@ test("1. Metadata Parser - cleans retailer title noise", () => {
   );
 });
 
-test("2. Metadata Parser - extracts OpenGraph and Meta tags from HTML", () => {
+test("2. Metadata Parser - extracts OpenGraph, Twitter Cards, and Meta tags from HTML", () => {
   const sampleHtml = `
     <!DOCTYPE html>
     <html>
@@ -63,7 +64,7 @@ test("3. Metadata Parser - extracts Schema.org JSON-LD Product schema", () => {
             "@context": "https://schema.org",
             "@type": "Product",
             "name": "Nike Dunk Low Retro",
-            "image": "https://static.nike.com/a/images/t_PDP_1280_v1/f_auto,q_auto:eco/b1bcbca4-e853-4df7-b329-5be3c61ee057/dunk-low-retro-shoe-66RG voice.png",
+            "image": "https://static.nike.com/a/images/t_PDP_1280_v1/f_auto,q_auto:eco/b1bcbca4-e853-4df7-b329-5be3c61ee057/dunk-low-retro-shoe-66RG.png",
             "description": "Created for the hardwood but taken to the streets.",
             "sku": "DD1391-100",
             "brand": {
@@ -93,15 +94,36 @@ test("3. Metadata Parser - extracts Schema.org JSON-LD Product schema", () => {
   assert.ok(extracted.image?.includes("static.nike.com"));
 });
 
-test("4. Metadata Parser - handles invalid / offline URLs gracefully", async () => {
-  const res = await fetchRemoteProductMetadata("https://nonexistent-retailer-domain-1234567.com/product/123");
-  assert.equal(res.success, true); // Valid HTTP URL format
-  assert.equal(res.isFetched, false); // Failed remote network fetch, graceful fallback
-  assert.ok(res.message);
-  assert.equal(res.domain, "nonexistent-retailer-domain-1234567.com");
+test("4. Metadata Parser - extracts Twitter cards when OpenGraph is absent", () => {
+  const sampleHtml = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta name="twitter:title" content="Adidas Ultraboost Light Running Shoes" />
+        <meta name="twitter:image" content="https://assets.adidas.com/images/w_600,f_auto,q_auto/ultraboost.jpg" />
+        <meta name="twitter:description" content="Experience epic energy with the new Ultraboost Light." />
+        <meta itemprop="price" content="18999" />
+      </head>
+      <body></body>
+    </html>
+  `;
+
+  const parsedUrl = parseRetailerUrl("https://www.adidas.co.in/ultraboost-light/HQ6351.html");
+  const extracted = parseHtmlMetadata(sampleHtml, parsedUrl);
+
+  assert.equal(extracted.title, "Adidas Ultraboost Light Running Shoes");
+  assert.equal(extracted.image, "https://assets.adidas.com/images/w_600,f_auto,q_auto/ultraboost.jpg");
+  assert.equal(extracted.price, 18999);
 });
 
-test("5. Server Action - fetchProductMetadataAction respects Admin Session", async () => {
+test("5. Metadata Parser - handles invalid URLs gracefully without crashing", async () => {
+  const res = await fetchProductMetadata("invalid-url-not-http");
+  assert.equal(res.success, false);
+  assert.equal(res.isFetched, false);
+  assert.ok(res.message);
+});
+
+test("6. Server Action - fetchProductMetadataAction respects Admin Session", async () => {
   // Authorized admin user
   const adminUser = {
     id: "admin-user-1",
