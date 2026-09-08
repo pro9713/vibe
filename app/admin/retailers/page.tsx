@@ -143,9 +143,11 @@ export default function AdminRetailersPage() {
     const tier = r.badgeTier || "trusted_retailer";
     setBadgeTier(tier);
     setBadgeLabel(r.badgeLabel || getBadgeLabelForTier(tier));
-    setAffiliateType(r.affiliateType || "none");
-    setAffiliateParam(r.affiliateParam || "");
-    setAffiliateValue(r.affiliateValue || "");
+    const isAmazon = r.name.toLowerCase().includes("amazon") || r.website.toLowerCase().includes("amazon");
+    const defaultAffType = r.affiliateType || (isAmazon ? "amazon_tag" : "none");
+    setAffiliateType(defaultAffType);
+    setAffiliateParam(r.affiliateParam || (defaultAffType === "amazon_tag" ? "tag" : ""));
+    setAffiliateValue(r.affiliateValue || (r as any).affiliate_value || "");
     setIsActive(r.isActive);
     setErrorMessage(null);
     setShowModal(true);
@@ -501,24 +503,38 @@ export default function AdminRetailersPage() {
                   </div>
                 </div>
 
-                {/* Card Actions */}
+                {/* Card Actions & Affiliate Tag */}
                 <div className="pt-4 mt-4 border-t border-gray-100 flex items-center justify-between">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
-                      r.isActive
-                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                        : "bg-gray-100 text-gray-500 border border-gray-200"
-                    }`}
-                  >
-                    {r.isActive ? "ACTIVE" : "INACTIVE"}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
+                        r.isActive
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          : "bg-gray-100 text-gray-500 border border-gray-200"
+                      }`}
+                    >
+                      {r.isActive ? "ACTIVE" : "INACTIVE"}
+                    </span>
+
+                    {(r.affiliateValue || (r as any).affiliate_value) ? (
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-2.5 py-0.5 text-[9px] font-mono font-bold text-purple-700 border border-purple-200 shadow-2xs"
+                        title={`Active Affiliate Tracking Tag: ${r.affiliateValue || (r as any).affiliate_value}`}
+                      >
+                        <Tag size={9} className="text-purple-600 shrink-0" />
+                        <span>Tag: {r.affiliateValue || (r as any).affiliate_value}</span>
+                      </span>
+                    ) : (
+                      <span className="text-[9px] text-gray-400 font-medium">No Tag</span>
+                    )}
+                  </div>
 
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => handleOpenEditModal(r)}
                       className="rounded-xl border border-gray-200 bg-white p-2 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition shadow-2xs"
-                      title="Edit retailer parameters"
+                      title="Edit retailer & affiliate parameters"
                     >
                       <Edit2 size={13} />
                     </button>

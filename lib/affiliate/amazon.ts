@@ -84,6 +84,57 @@ export function buildAmazonAffiliateUrl(
 }
 
 /**
+ * Builds an outbound redirect URL with affiliate tracking parameters (e.g. ?tag=...).
+ */
+export function buildAffiliateUrl(
+  url: string | null | undefined,
+  optionsOrTag?:
+    | string
+    | {
+        store?: string;
+        affiliateType?: string;
+        affiliateParam?: string;
+        affiliateValue?: string;
+      }
+): string {
+  if (!url || typeof url !== "string") {
+    return url || "";
+  }
+
+  if (typeof optionsOrTag === "string") {
+    return buildAmazonAffiliateUrl(url, optionsOrTag);
+  }
+
+  if (!optionsOrTag) {
+    return buildAmazonAffiliateUrl(url);
+  }
+
+  if (
+    isAmazonUrl(url) ||
+    optionsOrTag.affiliateType === "amazon_tag" ||
+    optionsOrTag.store?.toLowerCase().includes("amazon")
+  ) {
+    const tag = optionsOrTag.affiliateValue || getAmazonAssociateTag();
+    return buildAmazonAffiliateUrl(url, tag);
+  }
+
+  const paramKey = optionsOrTag.affiliateParam?.trim() || "tag";
+  const paramVal = optionsOrTag.affiliateValue?.trim();
+
+  if (paramVal) {
+    try {
+      const parsed = new URL(url);
+      parsed.searchParams.set(paramKey, paramVal);
+      return parsed.toString();
+    } catch {
+      return url;
+    }
+  }
+
+  return url;
+}
+
+/**
  * Checks whether an offer belongs to Amazon by store name or by URL.
  */
 export function isAmazonOffer(offer: Pick<StoreOffer, "store"> & { url?: string }): boolean {

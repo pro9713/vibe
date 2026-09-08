@@ -16,6 +16,7 @@ import { useLocation } from "@/lib/location";
 import { trustedStores } from "@/data/stores";
 import { getBestTrustedDeal, getCheapestOffer, analyzeDeals } from "@/data/dealEngine";
 import { recordPriceSnapshot } from "@/lib/price-history";
+import { buildAffiliateUrl } from "@/lib/affiliate";
 
 interface LiveStoreComparisonProps {
   product: Product;
@@ -41,12 +42,16 @@ export default function LiveStoreComparison({
   const bestPrice = bestTrustedDeal?.price ?? (cheapestOffer?.price || 0);
 
   // Buy URL for Best Trusted Deal primary CTA
-  const primaryBuyUrl =
+  const rawBuyUrl =
     bestTrustedDeal?.affiliateUrl ||
     bestTrustedDeal?.url ||
     offers.find((o) => o.price === bestPrice)?.affiliateUrl ||
     offers.find((o) => o.price === bestPrice)?.url ||
     "#";
+
+  const primaryBuyUrl = buildAffiliateUrl(rawBuyUrl, {
+    store: bestTrustedDeal?.store,
+  });
 
   // Identify next trusted store for savings calculation
   const trustedSorted = offers
@@ -265,7 +270,9 @@ export default function LiveStoreComparison({
               cheapestOffer?.store.toLowerCase() === item.store.toLowerCase() &&
               cheapestOffer?.price === item.price;
 
-            const offerUrl = item.affiliateUrl || item.url || "#";
+            const offerUrl = buildAffiliateUrl(item.affiliateUrl || item.url || "#", {
+              store: item.store,
+            });
 
             const isAmazon = item.store.toLowerCase() === "amazon";
 

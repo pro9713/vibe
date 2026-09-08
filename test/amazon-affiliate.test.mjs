@@ -5,6 +5,7 @@ import {
   isAmazonUrl,
   getAmazonAssociateTag,
   buildAmazonAffiliateUrl,
+  buildAffiliateUrl,
   isAmazonOffer,
   tagAmazonOffer,
   tagAmazonOffers,
@@ -228,4 +229,33 @@ test("6. Gracefully handles unset AMAZON_ASSOCIATE_TAG without breaking URLs", (
   } finally {
     process.env.AMAZON_ASSOCIATE_TAG = originalEnv;
   }
+});
+
+test("7. buildAffiliateUrl attaches partner tracking tags and parameters accurately", () => {
+  // 1. Amazon tag via string
+  const amz1 = buildAffiliateUrl("https://www.amazon.in/dp/B0C6QW8T95", "vibe-partner-21");
+  assert.match(amz1, /tag=vibe-partner-21/);
+
+  // 2. Amazon tag via options object
+  const amz2 = buildAffiliateUrl("https://www.amazon.in/dp/B0C6QW8T95", {
+    store: "Amazon India",
+    affiliateType: "amazon_tag",
+    affiliateValue: "pricely-tag-21",
+  });
+  assert.match(amz2, /tag=pricely-tag-21/);
+
+  // 3. Custom partner query parameter
+  const partnerUrl = buildAffiliateUrl("https://www.myntra.com/shoes/nike", {
+    store: "Myntra",
+    affiliateType: "query_param",
+    affiliateParam: "aff_id",
+    affiliateValue: "partner_456",
+  });
+  assert.match(partnerUrl, /aff_id=partner_456/);
+  assert.ok(partnerUrl.startsWith("https://www.myntra.com/shoes/nike"));
+
+  // 4. Safe fallback for empty/null inputs
+  assert.equal(buildAffiliateUrl(null), "");
+  assert.equal(buildAffiliateUrl(undefined), "");
+  assert.equal(buildAffiliateUrl("https://example.com"), "https://example.com");
 });
